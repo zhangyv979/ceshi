@@ -13858,6 +13858,163 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 })();
 
 </script>
+    <script data-src="js/storage-organizer.js">
+/* ===== js/storage-organizer.js ===== */
+/* P33 全库整理：把所有会话内联的图一次性搬进媒体库
+ *
+ * 起因：P31 的外置只发生在 loadData()，也就是「你打开哪个会话，才整理哪个」。
+ *      有 5 个会话、只用过 1 个的话，剩下 4 个的图全部原样内联躺着。
+ *      实测：会话 A 17845KB → 2KB（外置成功），会话 B 17844KB 一动不动。
+ *
+ * 这里做的就是补上「没打开过的会话」。
+ *
+ * 顺序不能反：先 flush 媒体库、成功写进去了，再改会话里的引用。
+ *      反过来一旦配额满，会话已经变成 m: 引用、媒体库却没写进去 —— 刷新后图全是空白。
+ */
+(function () {
+    'use strict';
+
+    var PREFIX = 'CHAT_APP_V3_';
+    var SUFFIX = '_chatMessages';
+    var MEDIA_KEY = 'CHAT_APP_V3_media';
+    var MIN_LEN = 2048;
+
+    function isInlineImage(v) {
+        return typeof v === 'string' && v.length > MIN_LEN && v.indexOf('data:image') === 0;
+    }
+
+    /** 把一条消息里内联的图换成引用，返回替换条数 */
+    function shrinkMessage(m) {
+        if (!m || typeof m !== 'object') return 0;
+        var n = 0;
+        for (var k in m) {
+            if (!Object.prototype.hasOwnProperty.call(m, k)) continue;
+            var v = m[k];
+            if (isInlineImage(v)) {
+                var r = window.MediaStore.ref(v);
+                if (r !== v) { m[k] = r; n++; }
+            } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+                for (var k2 in v) {
+                    if (!Object.prototype.hasOwnProperty.call(v, k2)) continue;
+                    if (isInlineImage(v[k2])) {
+                        var r2 = window.MediaStore.ref(v[k2]);
+                        if (r2 !== v[k2]) { v[k2] = r2; n++; }
+                    }
+                }
+            }
+        }
+        return n;
+    }
+
+    function nextTick() {
+        return new Promise(function (r) { setTimeout(r, 0); });
+    }
+
+    /**
+     * 遍历所有会话键，把内联图搬进媒体库。
+     * @param {{skipSessionId?:string, onProgress?:Function, dryRun?:boolean}} opt
+     */
+    async function organizeSessions(opt) {
+        opt = opt || {};
+        var report = { sessions: 0, changed: 0, images: 0, skipped: 0, failed: 0, bytesBefore: 0, bytesAfter: 0 };
+        if (typeof localforage === 'undefined' || !window.MediaStore) {
+            report.failed = -1;
+            return report;
+        }
+        await window.MediaStore.init();
+
+        var keys = [];
+        try {
+            keys = await localforage.keys();
+        } catch (e) {
+            report.failed = -1;
+            return report;
+        }
+        var targets = keys.filter(function (k) {
+            return k.indexOf(PREFIX) === 0 && k.slice(-SUFFIX.length) === SUFFIX &&
+                k !== PREFIX + 'sessionList';
+        });
+
+        var say = function (done, total) {
+            if (typeof opt.onProgress === 'function') {
+                try { opt.onProgress({ done: done, total: total }); } catch (e) { }
+            }
+        };
+
+        for (var i = 0; i < targets.length; i++) {
+            var key = targets[i];
+            // 当前会话由 saveData 负责，这里跳过免得两边打架
+            if (opt.skipSessionId && key === PREFIX + opt.skipSessionId + SUFFIX) {
+                say(i + 1, targets.length);
+                continue;
+            }
+            var arr = null;
+            try {
+                arr = await localforage.getItem(key);
+            } catch (e) {
+                report.failed++;
+                continue;
+            }
+            if (!Array.isArray(arr) || !arr.length) { say(i + 1, targets.length); continue; }
+
+            var before = JSON.stringify(arr).length;
+            var n = 0;
+            for (var j = 0; j < arr.length; j++) n += shrinkMessage(arr[j]);
+            if (!n) { say(i + 1, targets.length); continue; }
+
+            report.bytesBefore += before;
+
+            if (opt.dryRun) {
+                report.sessions++;
+                report.images += n;
+                report.changed += n;
+                report.bytesAfter += JSON.stringify(arr).length;
+                say(i + 1, targets.length);
+                continue;
+            }
+
+            // 关键顺序：先落盘媒体库，确认成功，再改这个会话
+            var mediaOk = false;
+            try {
+                mediaOk = await window.MediaStore.flush();
+            } catch (e) {
+                mediaOk = false;
+            }
+            if (!mediaOk) {
+                // 空间不够：这个会话原样不动，等用户腾出空间再来
+                report.skipped++;
+                say(i + 1, targets.length);
+                continue;
+            }
+            try {
+                await localforage.setItem(key, arr);
+                report.sessions++;
+                report.images += n;
+                report.changed += n;
+                report.bytesAfter += JSON.stringify(arr).length;
+            } catch (e) {
+                console.warn('[organize] 写回失败', key, e);
+                report.failed++;
+            }
+            say(i + 1, targets.length);
+            await nextTick();
+        }
+        return report;
+    }
+
+    /** 估算还有多少可搬的（只读，不写盘） */
+    async function estimate() {
+        return organizeSessions({ dryRun: true });
+    }
+
+    window.StorageOrganizer = {
+        version: '1.0.0-p33',
+        organizeSessions: organizeSessions,
+        estimate: estimate
+    };
+})();
+
+</script>
     <script data-src="js/config.js">
 /* ===== js/config.js ===== */
 /*应用常量与数据结构*/
@@ -17161,6 +17318,26 @@ const loadData = async () => {
                 }
             } catch (e) { console.warn('[media] 历史媒体外置失败', e); }
         }
+
+        // P33：上面只整理了「当前打开的会话」。没打开过的那些会话，图还全部内联着，
+        //      一个会话几十 MB 一点都不奇怪。这里在首屏稳定后再后台搬一遍，只搬不压（无损）。
+        //      12 小时内只跑一次，避免每次开 App 都读一遍全库。
+        setTimeout(function () {
+            if (!window.StorageOrganizer) return;
+            var last = 0;
+            try { last = Number(localStorage.getItem('CHAT_APP_V3_org_ts') || 0); } catch (e) { last = 0; }
+            if (Date.now() - last < 12 * 3600 * 1000) return;
+            try { localStorage.setItem('CHAT_APP_V3_org_ts', String(Date.now())); } catch (e) { }
+            window.StorageOrganizer.organizeSessions({ skipSessionId: SESSION_ID }).then(function (r) {
+                if (r && r.changed > 0) {
+                    console.log('[organize] 整理了 ' + r.sessions + ' 个会话 / ' + r.images + ' 张图');
+                    if (typeof showNotification === 'function') {
+                        showNotification('已整理 ' + r.sessions + ' 个会话的图片，占用会明显下降', 'success', 4500);
+                    }
+                    if (typeof updateStats === 'function') { try { updateStats(); } catch (e) { } }
+                }
+            }).catch(function (e) { console.warn('[organize] 后台整理失败', e); });
+        }, 8000);
 
         if (savedBgGallery) {
             savedBackgrounds = savedBgGallery;
@@ -29309,7 +29486,7 @@ window.tryShowDailyGreeting = function() {
         +     '<div id="dm-repack-box" style="margin:2px 0 10px;">'
         +       '<button class="dm-drawer-action-btn" id="repack-images-real" style="width:100%;">'
         +         '<div class="dm-drawer-btn-icon"><i class="fas fa-compress-alt"></i></div>'
-        +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">压缩旧图片</div><div class="dm-drawer-btn-desc">把已存的图重新压小，省空间 · 建议先导出备份</div></div>'
+        +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">整理存储</div><div class="dm-drawer-btn-desc">把各会话的图收进媒体库并压小，省空间 · 建议先导出备份</div></div>'
         +       '</button>'
         +       '<div id="dm-repack-tip" style="display:none;white-space:pre-line;margin-top:8px;padding:9px 11px;border-radius:12px;background:var(--primary-bg);border:1px solid var(--border-color);font-size:11.5px;line-height:1.6;color:var(--text-secondary);"></div>'
         +     '</div>'
@@ -29561,37 +29738,61 @@ window.tryShowDailyGreeting = function() {
             var repackBtn = fullDrawer.querySelector('#repack-images-real');
             if (repackBtn) repackBtn.addEventListener('click', function () {
                 if (!window.ImageRepack || !window.ImageCodec) {
-                    if (typeof showNotification === 'function') showNotification('压缩模块未加载', 'error');
+                    if (typeof showNotification === 'function') showNotification('整理模块未加载', 'error');
                     return;
                 }
-                if (!confirm('压缩旧图片会重写库里所有已存的图，压完不可还原。\n\n建议先点上面的「导出备份」存一份，再回来执行。\n\n确定现在压缩吗？')) return;
+                if (!confirm('整理存储会重写所有会话里的图片，并重新压缩已存的图（压过不可还原）。\n\n建议先点上面的「导出备份」存一份，再回来执行。\n\n确定现在整理吗？')) return;
                 var tip = fullDrawer.querySelector('#dm-repack-tip');
                 var show = function (t) {
                     if (!tip) return;
                     tip.style.display = 'block';
                     tip.textContent = t;
                 };
+                var MB = function (n) { return (Math.max(0, n) / 1048576).toFixed(1) + ' MB'; };
                 repackBtn.disabled = true;
-                show('准备中…');
-                window.ImageRepack.run(function (p) {
-                    var pct = p.total > 0 ? Math.round(p.done / p.total * 100) : 0;
-                    show(p.phase + ' ' + p.done + ' / ' + p.total + '（' + pct + '%），中途别关页面');
-                }).then(function (r) {
+                show('第一步：把各会话的图收进媒体库…');
+
+                // 第一步：其他会话的图还内联着，先搬进媒体库（无损）
+                var step1 = (window.StorageOrganizer && typeof SESSION_ID !== 'undefined')
+                    ? window.StorageOrganizer.organizeSessions({
+                        skipSessionId: SESSION_ID,
+                        onProgress: function (p) {
+                            show('第一步：整理会话图片 ' + p.done + ' / ' + p.total + '，中途别关页面');
+                        }
+                    })
+                    : Promise.resolve({ sessions: 0, images: 0, changed: 0, skipped: 0, failed: 0, bytesBefore: 0, bytesAfter: 0 });
+
+                step1.then(function (o1) {
+                    show('第二步：压缩已存的图片…');
+                    return window.ImageRepack.run(function (p) {
+                        var pct = p.total > 0 ? Math.round(p.done / p.total * 100) : 0;
+                        show('第二步：' + p.phase + ' ' + p.done + ' / ' + p.total + '（' + pct + '%），中途别关页面');
+                    }).then(function (r) { return { o1: o1, r: r }; });
+                }).then(function (res) {
                     repackBtn.disabled = false;
-                    if (r.failed === -1) { show('压缩不可用：当前环境不支持。'); return; }
-                    var save = Math.max(0, r.before - r.after);
-                    var mb = function (n) { return (n / 1048576).toFixed(1) + ' MB'; };
-                    var txt = save > 0
-                        ? '完成：' + r.changed + ' 张已压小，省出约 ' + mb(save) + '（' + mb(r.before) + ' → ' + mb(r.after) + '）。'
-                        : '完成：没有可压的图，或者压完不比原来小，已全部保留原样。';
-                    show(txt + '\n刷新页面后生效。');
-                    if (typeof showNotification === 'function') showNotification('图片压缩完成，省出约 ' + mb(save), 'success');
+                    var o1 = res.o1 || {}, r = res.r || {};
+                    if (r.failed === -1) { show('当前环境不支持压缩，已跳过。'); return; }
+                    var moved = Math.max(0, (o1.bytesBefore || 0) - (o1.bytesAfter || 0));
+                    var saved = Math.max(0, (r.before || 0) - (r.after || 0));
+                    var lines = [];
+                    if (o1.sessions > 0) {
+                        lines.push('· 整理了 ' + o1.sessions + ' 个会话、' + o1.images + ' 张图，消息体少了 ' + MB(moved));
+                    }
+                    if (o1.skipped > 0) {
+                        lines.push('· 有 ' + o1.skipped + ' 个会话因为空间不足没动，腾出空间后再点一次');
+                    }
+                    if (r.changed > 0) {
+                        lines.push('· 压小了 ' + r.changed + ' 张，省出 ' + MB(saved));
+                    }
+                    if (!lines.length) lines.push('没有需要整理的内容，当前已经是最省的状态。');
+                    show(lines.join('\n') + '\n\n刷新页面后生效。');
+                    if (typeof showNotification === 'function') showNotification('整理完成，共省出约 ' + MB(moved + saved), 'success');
                     setTimeout(function () {
                         try { location.reload(); } catch (e) { }
-                    }, 2600);
+                    }, 3000);
                 }).catch(function (e) {
                     repackBtn.disabled = false;
-                    show('压缩中断：' + (e && e.message ? e.message : '未知错误') + '。原有图片未受影响。');
+                    show('整理中断：' + (e && e.message ? e.message : '未知错误') + '。原有图片未受影响，可以再点一次。');
                 });
             });
         }
