@@ -92,6 +92,11 @@
         }
     } catch (e) { }
 
+    /* 注意：这里原本想包一层 localforage.setItem 做外置兜底，
+       但 localforage 在 config()/setDriver() 之后会重新 bind 一次方法，
+       包好的函数会被覆盖掉（实测 __lfPatched 已置位，setItem 却还是原函数）。
+       所以改成在具体的写盘点调 MediaStore.safeSet()。 */
+
     /**
      * 2. 旧库救援：坏版本把数据写进了默认库 localforage。
      *    这里把其中的 CHAT_APP_V3_* 键搬回主库。
@@ -13537,6 +13542,99 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         return node;
     }
 
+    /** 深拷贝：只复制结构，字符串值按引用传递（几十 MB 的 base64 不会真的复制一遍） */
+    function clone(v) {
+        if (!v || typeof v !== 'object') return v;
+        if (Array.isArray(v)) {
+            var a = new Array(v.length);
+            for (var i = 0; i < v.length; i++) a[i] = clone(v[i]);
+            return a;
+        }
+        var proto = Object.getPrototypeOf(v);
+        if (proto !== Object.prototype && proto !== null) return v;   // Date / Map 之类原样
+        var o = {};
+        for (var k in v) {
+            if (Object.prototype.hasOwnProperty.call(v, k)) o[k] = clone(v[k]);
+        }
+        return o;
+    }
+
+    var MAX_DEPTH = 8;
+
+    /* 注意：数组元素本身可能就是一串 data URL（贴纸库、背景图库都是纯字符串数组），
+       所以递归时必须把「数组元素」也当成待处理值，不能只盯着对象属性。 */
+    function shrinkNode(node, depth) {
+        if (depth > MAX_DEPTH) return node;
+        if (Array.isArray(node)) {
+            for (var i = 0; i < node.length; i++) {
+                var x = node[i];
+                if (typeof x === 'string') { if (isMedia(x)) node[i] = ref(x); }
+                else if (x && typeof x === 'object') shrinkNode(x, depth + 1);
+            }
+            return node;
+        }
+        if (!node || typeof node !== 'object') return node;
+        for (var k in node) {
+            if (!Object.prototype.hasOwnProperty.call(node, k)) continue;
+            var v = node[k];
+            if (typeof v === 'string') { if (isMedia(v)) node[k] = ref(v); }
+            else if (v && typeof v === 'object') shrinkNode(v, depth + 1);
+        }
+        return node;
+    }
+
+    function hydrateNode(node, depth) {
+        if (depth > MAX_DEPTH) return node;
+        if (Array.isArray(node)) {
+            for (var i = 0; i < node.length; i++) {
+                var x = node[i];
+                if (typeof x === 'string') {
+                    if (x.indexOf(REF) === 0) {
+                        var g = items[x.slice(REF.length)];
+                        if (typeof g === 'string') node[i] = g;
+                    }
+                } else if (x && typeof x === 'object') hydrateNode(x, depth + 1);
+            }
+            return node;
+        }
+        if (!node || typeof node !== 'object') return node;
+        for (var k in node) {
+            if (!Object.prototype.hasOwnProperty.call(node, k)) continue;
+            var v = node[k];
+            if (typeof v === 'string') {
+                if (v.indexOf(REF) === 0) {
+                    var got = items[v.slice(REF.length)];
+                    if (typeof got === 'string') node[k] = got;
+                }
+            } else if (v && typeof v === 'object') hydrateNode(v, depth + 1);
+        }
+        return node;
+    }
+
+    /**
+     * 写盘用：任意深度的值 → 媒体全部换成引用。
+     * 返回深拷贝，不动调用方的活对象（否则内存里也变成 m:，渲染立刻挂）。
+     */
+    function shrinkDeep(v) {
+        if (typeof v === 'string') return isMedia(v) ? ref(v) : v;
+        if (!v || typeof v !== 'object') return v;
+        return shrinkNode(clone(v), 0);
+    }
+
+    /**
+     * 读盘用：引用还原成真实地址，原地改（刚反序列化出来的对象没人共享）。
+     * 找不到对应媒体的引用原样留着，绝不返回空串把图弄丢。
+     */
+    function hydrateDeep(v) {
+        if (typeof v === 'string') {
+            if (!isRef(v)) return v;
+            var got = items[v.slice(REF.length)];
+            return typeof got === 'string' ? got : v;
+        }
+        if (!v || typeof v !== 'object') return v;
+        return hydrateNode(v, 0);
+    }
+
     /** 渲染用：把一条消息里的引用还原，返回浅拷贝（不改原对象） */
     function hydrateOne(m) {
         if (!m || typeof m !== 'object') return m;
@@ -13627,6 +13725,23 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         return n;
     }
 
+    /**
+     * 写盘专用：先把值里的图换成引用，再写；写完顺手把媒体库落盘。
+     * 所有「裸调 localforage.setItem」的地方都应该用它，
+     * 否则下一次保存就会把整理好的引用覆盖回内联 base64。
+     */
+    function safeSet(key, value) {
+        var v = value;
+        try { v = shrinkDeep(value); } catch (e) { console.warn('[media] safeSet 外置失败', e); }
+        if (typeof localforage === 'undefined') return Promise.reject(new Error('no localforage'));
+        return localforage.setItem(key, v).then(function () {
+            return flush();
+        }).catch(function (e) {
+            console.warn('[media] safeSet 写入失败', key, e);
+            return false;
+        });
+    }
+
     function clear() {
         items = {};
         dirty = true;
@@ -13634,14 +13749,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
 
     window.MediaStore = {
-        version: '1.0.0-p31',
+        version: '1.1.0-p34',
         KEY: KEY,
         init: init,
         flush: flush,
         ref: ref,
         resolve: resolve,
         isRef: isRef,
+        isMedia: isMedia,
         shrink: shrink,
+        shrinkDeep: shrinkDeep,
+        hydrateDeep: hydrateDeep,
+        safeSet: safeSet,
         hydrateOne: hydrateOne,
         shrinkMessages: function (arr) { return shrink(arr, 0); },
         bytes: bytes,
@@ -14007,9 +14126,81 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         return organizeSessions({ dryRun: true });
     }
 
+    /**
+     * P34：设置类键的图也搬进媒体库。
+     * 背景图库、头像、贴纸库、主题封面这些以前是原样内联存的，
+     * 这才是「设置数据」几十 MB 的来源，会话整理一点都碰不到它们。
+     *
+     * 只在「手动整理」里跑：这些键对应的活对象在页面内存里，
+     * 后台偷偷改盘上会跟内存打架，所以改完必须刷新（调用方负责）。
+     */
+    async function organizeSettings(opt) {
+        opt = opt || {};
+        var report = { keys: 0, changed: 0, images: 0, skipped: 0, failed: 0, before: 0, after: 0 };
+        if (typeof localforage === 'undefined' || !window.MediaStore) {
+            report.failed = -1;
+            return report;
+        }
+        await window.MediaStore.init();
+
+        var keys = [];
+        try { keys = await localforage.keys(); } catch (e) { report.failed = -1; return report; }
+
+        /* P34：只处理「设置类」的键，白名单，不碰 ext_* 扩展数据。
+           扩展模块（朋友圈封面、心情手帐、信封）自己读写盘，不走 loadData，
+           一旦被外置成 m: 引用，它们的渲染拿不到真实地址就会白屏。
+           这里保守一点：只搬确定能安全还原的那几个键。 */
+        var SAFE = /_(chatSettings|backgroundGallery|stickerLibrary|myStickerLibrary|partnerAvatar|myAvatar|chatBackground)$/;
+        var targets = keys.filter(function (k) {
+            if (k.indexOf(PREFIX) !== 0 || k === MEDIA_KEY) return false;
+            if (SAFE.test(k)) return true;
+            return k === PREFIX + 'customThemes' || k === PREFIX + 'themeSchemes';
+        });
+
+        for (var i = 0; i < targets.length; i++) {
+            var key = targets[i];
+            var v = null;
+            try { v = await localforage.getItem(key); } catch (e) { report.failed++; continue; }
+            if (v == null) continue;
+
+            var before = 0;
+            try { before = JSON.stringify(v).length; } catch (e) { continue; }
+            if (before < 4096) continue;          // 小键里不可能塞着大图
+
+            var out = null;
+            try { out = window.MediaStore.shrinkDeep(v); } catch (e) { report.failed++; continue; }
+            var after = 0;
+            try { after = JSON.stringify(out).length; } catch (e) { report.failed++; continue; }
+            if (after >= before * 0.95) continue;  // 没省下什么，别白写一次盘
+
+            if (before > 200 * 1024 * 1024) { report.skipped++; continue; }
+
+            var mediaOk = false;
+            try { mediaOk = await window.MediaStore.flush(); } catch (e) { mediaOk = false; }
+            if (!mediaOk) { report.skipped++; continue; }
+
+            try {
+                await localforage.setItem(key, out);
+                report.keys++;
+                report.changed++;
+                report.before += before;
+                report.after += after;
+                if (typeof opt.onProgress === 'function') {
+                    try { opt.onProgress({ done: i + 1, total: targets.length, key: key }); } catch (e) { }
+                }
+            } catch (e) {
+                console.warn('[organize] 写回失败', key, e);
+                report.failed++;
+            }
+            await nextTick();
+        }
+        return report;
+    }
+
     window.StorageOrganizer = {
-        version: '1.0.0-p33',
+        version: '1.1.0-p34',
         organizeSessions: organizeSessions,
+        organizeSettings: organizeSettings,
         estimate: estimate
     };
 })();
@@ -16895,6 +17086,18 @@ async function importAllData(file) {
 /* ===== js/core.js ===== */
 /*核心应用逻辑：数据加载保存、消息渲染、会话管理等*/
 
+/* P34：写盘统一入口。
+   直接把 data URL 写进 IndexedDB 的地方，迟早会被下一次保存覆盖回内联，
+   所以凡是可能带图的键（背景图库 / 背景 / 头像 / 贴纸库）都走这里 ——
+   先换成 m: 引用写下去，再把媒体库 flush 一次。 */
+function saveKeyWithMedia(key, value) {
+    if (window.MediaStore && typeof MediaStore.safeSet === 'function') {
+        return MediaStore.safeSet(key, value);
+    }
+    return localforage.setItem(key, value);
+}
+
+
         function clearAllAppData() {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease;';
@@ -17144,7 +17347,7 @@ autoSendInterval: 5,
                     if (e.target.closest('.bg-delete-btn')) return;
                     applyBackground(bg.value);
                     safeSetItem(getStorageKey('chatBackground'), bg.value);
-                    localforage.setItem(getStorageKey('chatBackground'), bg.value);
+                    saveKeyWithMedia(getStorageKey('chatBackground'), bg.value);
                     renderBackgroundGallery();
                     showNotification('背景已切换', 'success');
                 };
@@ -17178,7 +17381,7 @@ autoSendInterval: 5,
 
 
         function saveBackgroundGallery() {
-    localforage.setItem(getStorageKey('backgroundGallery'), savedBackgrounds);
+    saveKeyWithMedia(getStorageKey('backgroundGallery'), savedBackgrounds);
 }
 
 
@@ -17227,7 +17430,14 @@ const loadData = async () => {
             localforage.getItem(getStorageKey('customPokeGroups')),
             localforage.getItem(getStorageKey('customStatusGroups'))
         ]);
-        const getVal = (index) => results[index].status === 'fulfilled' ? results[index].value : null;
+        // P34：读出来的东西统一把 m: 引用还原成真实地址。
+        // 设置、背景图库、贴纸库、头像里的图在盘上都是引用，内存里必须是完整 data URL，
+        // 这样所有渲染代码一行都不用改。
+        const getVal = (index) => {
+            const v = results[index].status === 'fulfilled' ? results[index].value : null;
+            if (v == null || !window.MediaStore) return v;
+            try { return MediaStore.hydrateDeep(v); } catch (e) { return v; }
+        };
 
         const savedSettings = getVal(0);
         const savedMessages = getVal(1);
@@ -17291,7 +17501,10 @@ const loadData = async () => {
                 messages = backup.messages.map(m => ({
                     ...m, timestamp: new Date(m.timestamp)
                 }));
-                if (backup.settings) Object.assign(settings, backup.settings);
+                // 备份里存的是 m: 引用，恢复后要还原，否则图片全是空白
+                if (window.MediaStore) { try { MediaStore.hydrateDeep(messages); } catch (e) { } }
+                if (backup.settings) { Object.assign(settings, backup.settings); }
+                if (window.MediaStore && backup.settings) { try { MediaStore.hydrateDeep(settings); } catch (e) { } }
                 if (backup.anniversaries && Array.isArray(backup.anniversaries)) {
                     anniversaries = backup.anniversaries;
                 }
@@ -17324,16 +17537,31 @@ const loadData = async () => {
         //      12 小时内只跑一次，避免每次开 App 都读一遍全库。
         setTimeout(function () {
             if (!window.StorageOrganizer) return;
+            // 标记键带版本号：P34 换了整理范围（多搬设置里的图），
+            // 老标记会让升级后 12 小时内都不跑，用户看不到任何变化。
+            var TS_KEY = 'CHAT_APP_V3_org2_ts';
             var last = 0;
-            try { last = Number(localStorage.getItem('CHAT_APP_V3_org_ts') || 0); } catch (e) { last = 0; }
+            try { last = Number(localStorage.getItem(TS_KEY) || 0); } catch (e) { last = 0; }
             if (Date.now() - last < 12 * 3600 * 1000) return;
-            try { localStorage.setItem('CHAT_APP_V3_org_ts', String(Date.now())); } catch (e) { }
+            try { localStorage.setItem(TS_KEY, String(Date.now())); } catch (e) { }
             window.StorageOrganizer.organizeSessions({ skipSessionId: SESSION_ID }).then(function (r) {
                 if (r && r.changed > 0) {
                     console.log('[organize] 整理了 ' + r.sessions + ' 个会话 / ' + r.images + ' 张图');
                     if (typeof showNotification === 'function') {
                         showNotification('已整理 ' + r.sessions + ' 个会话的图片，占用会明显下降', 'success', 4500);
                     }
+                    if (typeof updateStats === 'function') { try { updateStats(); } catch (e) { } }
+                }
+                // P34：背景图库 / 头像 / 贴纸库里的图同样要搬。
+                //      这些是「设置数据」几十 MB 的正主，会话整理碰不到。
+                //      盘上改了不影响内存里的活对象，下次保存也会自动外置，不存在打架。
+                if (window.StorageOrganizer.organizeSettings) {
+                    return window.StorageOrganizer.organizeSettings({});
+                }
+                return null;
+            }).then(function (r2) {
+                if (r2 && r2.changed > 0) {
+                    console.log('[organize] 设置里的图搬了 ' + r2.changed + ' 项');
                     if (typeof updateStats === 'function') { try { updateStats(); } catch (e) { } }
                 }
             }).catch(function (e) { console.warn('[organize] 后台整理失败', e); });
@@ -17369,7 +17597,7 @@ const loadData = async () => {
             const lsBg = safeGetItem(getStorageKey('chatBackground'));
             if (lsBg) {
                 applyBackground(lsBg);
-                localforage.setItem(getStorageKey('chatBackground'), lsBg);
+                saveKeyWithMedia(getStorageKey('chatBackground'), lsBg);
             }
         }
 
@@ -17533,22 +17761,30 @@ const saveData = async () => {
         } catch (e) { console.warn('[media] 媒体外置失败，本次仍写内联图', e); }
     }
 
+    // P34：设置里的图（背景图库、头像、贴纸库）以前是原样内联存的，
+    //      这是「设置数据」几十 MB 的真正来源。写盘前统一换成 m: 引用，
+    //      深拷贝一份再改，内存里的活对象保持完整 data URL。
+    const SV = (v) => {
+        try { return window.MediaStore ? MediaStore.shrinkDeep(v) : v; }
+        catch (e) { console.warn('[media] 外置失败，本次原样写盘', e); return v; }
+    };
+
     const promises = [
-        { key: 'chatSettings',           val: () => localforage.setItem(getStorageKey('chatSettings'), settings) },
-        { key: 'customReplies',          val: () => localforage.setItem(getStorageKey('customReplies'), customReplies) },
-        { key: 'customReplyGroups',      val: () => localforage.setItem(getStorageKey('customReplyGroups'), window.customReplyGroups || []) },
-        { key: 'customPokeGroups',        val: () => localforage.setItem(getStorageKey('customPokeGroups'), window.customPokeGroups || []) },
-        { key: 'customStatusGroups',      val: () => localforage.setItem(getStorageKey('customStatusGroups'), window.customStatusGroups || []) },
-        { key: 'customEmojis',           val: () => localforage.setItem(getStorageKey('customEmojis'), customEmojis) },
-        { key: 'anniversaries',          val: () => localforage.setItem(getStorageKey('anniversaries'), anniversaries) },
-        { key: 'customPokes',            val: () => localforage.setItem(getStorageKey('customPokes'), customPokes) },
-        { key: 'customStatuses',         val: () => localforage.setItem(getStorageKey('customStatuses'), customStatuses) },
-        { key: 'customMottos',           val: () => localforage.setItem(getStorageKey('customMottos'), customMottos) },
-        { key: 'customIntros',           val: () => localforage.setItem(getStorageKey('customIntros'), customIntros) },
-        { key: 'stickerLibrary',         val: () => localforage.setItem(getStorageKey('stickerLibrary'), stickerLibrary) },
-        { key: 'myStickerLibrary',       val: () => localforage.setItem(getStorageKey('myStickerLibrary'), myStickerLibrary) },
-        { key: 'customThemes',           val: () => localforage.setItem(`${APP_PREFIX}customThemes`, customThemes) },
-        { key: 'themeSchemes',           val: () => localforage.setItem(`${APP_PREFIX}themeSchemes`, themeSchemes) },
+        { key: 'chatSettings',           val: () => localforage.setItem(getStorageKey('chatSettings'), SV(settings)) },
+        { key: 'customReplies',          val: () => localforage.setItem(getStorageKey('customReplies'), SV(customReplies)) },
+        { key: 'customReplyGroups',      val: () => localforage.setItem(getStorageKey('customReplyGroups'), SV(window.customReplyGroups || [])) },
+        { key: 'customPokeGroups',        val: () => localforage.setItem(getStorageKey('customPokeGroups'), SV(window.customPokeGroups || [])) },
+        { key: 'customStatusGroups',      val: () => localforage.setItem(getStorageKey('customStatusGroups'), SV(window.customStatusGroups || [])) },
+        { key: 'customEmojis',           val: () => localforage.setItem(getStorageKey('customEmojis'), SV(customEmojis)) },
+        { key: 'anniversaries',          val: () => localforage.setItem(getStorageKey('anniversaries'), SV(anniversaries)) },
+        { key: 'customPokes',            val: () => localforage.setItem(getStorageKey('customPokes'), SV(customPokes)) },
+        { key: 'customStatuses',         val: () => localforage.setItem(getStorageKey('customStatuses'), SV(customStatuses)) },
+        { key: 'customMottos',           val: () => localforage.setItem(getStorageKey('customMottos'), SV(customMottos)) },
+        { key: 'customIntros',           val: () => localforage.setItem(getStorageKey('customIntros'), SV(customIntros)) },
+        { key: 'stickerLibrary',         val: () => localforage.setItem(getStorageKey('stickerLibrary'), SV(stickerLibrary)) },
+        { key: 'myStickerLibrary',       val: () => localforage.setItem(getStorageKey('myStickerLibrary'), SV(myStickerLibrary)) },
+        { key: 'customThemes',           val: () => localforage.setItem(`${APP_PREFIX}customThemes`, SV(customThemes)) },
+        { key: 'themeSchemes',           val: () => localforage.setItem(`${APP_PREFIX}themeSchemes`, SV(themeSchemes)) },
         { key: 'chatMessages',           val: () => localforage.setItem(getStorageKey('chatMessages'), messages) },
     ];
 
@@ -17566,13 +17802,13 @@ const saveData = async () => {
     })();
 
     if (partnerAvatarSrc) {
-        promises.push({ key: 'partnerAvatar', val: () => localforage.setItem(getStorageKey('partnerAvatar'), partnerAvatarSrc) });
+        promises.push({ key: 'partnerAvatar', val: () => localforage.setItem(getStorageKey('partnerAvatar'), SV(partnerAvatarSrc)) });
     } else {
         promises.push({ key: 'partnerAvatar', val: () => localforage.removeItem(getStorageKey('partnerAvatar')) });
     }
 
     if (myAvatarSrc) {
-        promises.push({ key: 'myAvatar', val: () => localforage.setItem(getStorageKey('myAvatar'), myAvatarSrc) });
+        promises.push({ key: 'myAvatar', val: () => localforage.setItem(getStorageKey('myAvatar'), SV(myAvatarSrc)) });
     } else {
         promises.push({ key: 'myAvatar', val: () => localforage.removeItem(getStorageKey('myAvatar')) });
     }
@@ -18590,7 +18826,7 @@ if (partnerPersonas && partnerPersonas.length > 0 && Math.random() < 0.3) {
                      
                      if (nextPersona.avatar) {
                          updateAvatar(DOMElements.partner.avatar, nextPersona.avatar);
-                         localforage.setItem(getStorageKey('partnerAvatar'), nextPersona.avatar);
+                         saveKeyWithMedia(getStorageKey('partnerAvatar'), nextPersona.avatar);
                      }
                      throttledSaveData();
                 }
@@ -29400,6 +29636,7 @@ window.tryShowDailyGreeting = function() {
         +       '<div class="dm-stat-block"><div class="dm-stat-block-icon" style="color:#3BC8A4"><i class="fas fa-images"></i></div><div class="dm-stat-pill-val" id="dm-stat-media">—</div><div class="dm-stat-pill-key">图片媒体</div></div>'
         +     '</div>'
         +     '<div class="dm-progress-track"><div class="dm-progress-fill" id="dm-storage-bar" style="width:0%"></div></div>'
+        +     '<div id="dm-storage-note" style="display:none;margin-top:8px;font-size:11px;line-height:1.5;color:var(--text-secondary);opacity:0.85"></div>'
         +   '</div>'
 
         +   '<div class="dm-section-label"><i class="fas fa-cloud-upload-alt"></i> 备份与恢复</div>'
@@ -29520,6 +29757,7 @@ window.tryShowDailyGreeting = function() {
     function isCorrect(mc) {
         return mc.querySelector('.dm-topbar') !== null
             && mc.querySelector('.dm-storage-card') !== null
+            && mc.querySelector('#dm-storage-note') !== null
             && mc.querySelector('.dm6') === null
             && mc.querySelector('.dm6-tabs') === null;
     }
@@ -29542,14 +29780,14 @@ window.tryShowDailyGreeting = function() {
 
     function writeHTML(mc) {
         mc.innerHTML = INNER_HTML;
-        mc.dataset.dm6Built = 'v9'; 
+        mc.dataset.dm6Built = 'v10'; 
         ensureDrawersOnBody();
         bindAll(mc);
     }
 
     function ensureHTML(mc) {
         if (!mc) return;
-        mc.dataset.dm6Built = 'v9'; 
+        mc.dataset.dm6Built = 'v10'; 
         if (!isCorrect(mc)) writeHTML(mc);
         else ensureDrawersOnBody(); 
     }
@@ -29560,7 +29798,14 @@ window.tryShowDailyGreeting = function() {
         return (b / 1048576).toFixed(2) + ' MB';
     }
 
-    function applyStats(total, msgs, cfg, media, quota, isReal) {
+    /* P34：4KB 以下一律显示 0。
+       重置之后 App 会立刻建一个空会话、写一份默认配置，加起来几百字节到两三 KB。
+       数字上不是零，但对用户没有任何意义，还会让人以为「没清干净」。 */
+    function tiny(n) {
+        return n < 4096 ? 0 : n;
+    }
+
+    function applyStats(total, msgs, cfg, media, quota, isReal, extra, realUsage) {
         var cap = quota && quota > 0 ? quota : (5 * 1024 * 1024);
         var pct = Math.min(100, total / cap * 100);
         var g = function (id) { return document.getElementById(id); };
@@ -29575,18 +29820,33 @@ window.tryShowDailyGreeting = function() {
         }
         if (g('dm-storage-total')) {
             g('dm-storage-total').textContent = fmt(total) + ' / ' + fmt(cap);
-            g('dm-storage-total').title = isReal
-                ? '这是浏览器实际占用的空间（含索引开销）'
-                : '浏览器未提供真实占用，这里是按数据量估算的';
+            var tip = '按数据量统计（每个字符 2 字节）';
+            if (realUsage > 0) {
+                tip += '；浏览器报的占用是 ' + fmt(realUsage) +
+                    '，它包含已删除但还没回收的空间和缓存，只涨不跌，所以不拿来当总量';
+            }
+            g('dm-storage-total').title = tip;
         }
-        if (g('dm-stat-msgs'))     g('dm-stat-msgs').textContent     = fmt(msgs);
-        if (g('dm-stat-settings')) g('dm-stat-settings').textContent = fmt(cfg);
-        if (g('dm-stat-media'))    g('dm-stat-media').textContent    = fmt(media);
+        if (g('dm-stat-msgs'))     g('dm-stat-msgs').textContent     = fmt(tiny(msgs));
+        if (g('dm-stat-settings')) g('dm-stat-settings').textContent = fmt(tiny(cfg));
+        if (g('dm-stat-media'))    g('dm-stat-media').textContent    = fmt(tiny(media));
+        if (g('dm-storage-note')) {
+            var show = extra > 0 && total > 0 && extra > total * 0.2;
+            g('dm-storage-note').textContent = show
+                ? '浏览器另报了 ' + fmt(extra + total) + ' 的占用，里面含已删除还没回收的空间和缓存，只涨不跌，以上面这个数为准'
+                : '';
+            g('dm-storage-note').style.display = show ? 'block' : 'none';
+        }
     }
 
-    /* P31：总量改成浏览器给的「真实占用」，分类仍按数据量拆分。
-       旧版是自己按字符数 ×2 估，估出来比实际大好几倍，还把上限写死成 5MB，
-       于是出现「796MB / ~5MB」这种自相矛盾的数字。 */
+    // 调试/验收用：让外面能直接喂一组数字看渲染结果
+    window.__dmApplyStats = applyStats;
+
+    /* P34：分类不再等比放大。
+       上一版拿真实占用除以自算总量得出 scale，再乘给三个分类 ——
+       但真实占用里含索引开销和 Service Worker 缓存，通常是自算量的 2~3 倍，
+       于是「设置数据 20MB」被写成 71MB，「重置后 0」写成 4MB。
+       现在：分类照实报，差额单列成「缓存与索引开销」。 */
     function updateStats() {
         var total = 0, msgs = 0, cfg = 0, media = 0;
         var classify = function (k, bytes) {
@@ -29618,13 +29878,16 @@ window.tryShowDailyGreeting = function() {
             est.then(function (e) {
                 var real = e && e.usage > 0 ? e.usage : 0;
                 var quota = e && e.quota > 0 ? e.quota : 0;
-                var logical = msgs + cfg + media || 1;
-                var scale = real > 0 ? real / logical : 1;
-                applyStats(
-                    real > 0 ? real : logical,
-                    (msgs + 0) * scale, (cfg + 0) * scale, (media + 0) * scale,
-                    quota, real > 0
-                );
+                var sum = msgs + cfg + media;
+
+                /* 总量用「自己算的字节数」，不用 estimate().usage。
+                   实测：删掉一个 21MB 的键之后，estimate().usage 四秒后、
+                   刷新后都还是 21.2MB —— Chrome 不回收已删的 IndexedDB 页，
+                   这个数字只涨不跌。拿它当总量，用户会看到
+                   「压缩完 / 删完，占用一点没变」，比估不准还糟。
+                   自算值按 UTF-16 ×2，实测和写入量基本一致。 */
+                var extra = real > sum ? real - sum : 0;   // 只做参考，不并进分类
+                applyStats(sum, msgs, cfg, media, quota, false, extra, real);
             });
         };
 
@@ -29763,30 +30026,45 @@ window.tryShowDailyGreeting = function() {
                     : Promise.resolve({ sessions: 0, images: 0, changed: 0, skipped: 0, failed: 0, bytesBefore: 0, bytesAfter: 0 });
 
                 step1.then(function (o1) {
-                    show('第二步：压缩已存的图片…');
+                    // 第二步：设置类键（背景图库 / 头像 / 贴纸库 / 主题）里的图也搬走。
+                    // 这是「设置数据」几十 MB 的真正来源，会话整理碰不到。
+                    show('第二步：整理背景、头像、贴纸里的图…');
+                    return (window.StorageOrganizer && window.StorageOrganizer.organizeSettings)
+                        ? window.StorageOrganizer.organizeSettings({
+                            onProgress: function (p) {
+                                show('第二步：整理设置图片 ' + p.done + ' / ' + p.total + '，中途别关页面');
+                            }
+                        })
+                        : Promise.resolve({ keys: 0, changed: 0, before: 0, after: 0, skipped: 0, failed: 0 });
+                }).then(function (o2) {
+                    show('第三步：压缩已存的图片…');
                     return window.ImageRepack.run(function (p) {
                         var pct = p.total > 0 ? Math.round(p.done / p.total * 100) : 0;
-                        show('第二步：' + p.phase + ' ' + p.done + ' / ' + p.total + '（' + pct + '%），中途别关页面');
-                    }).then(function (r) { return { o1: o1, r: r }; });
+                        show('第三步：' + p.phase + ' ' + p.done + ' / ' + p.total + '（' + pct + '%），中途别关页面');
+                    }).then(function (r) { return { o2: o2 || {}, r: r }; });
                 }).then(function (res) {
                     repackBtn.disabled = false;
-                    var o1 = res.o1 || {}, r = res.r || {};
+                    var o1 = res.o1 || {}, o2 = res.o2 || {}, r = res.r || {};
                     if (r.failed === -1) { show('当前环境不支持压缩，已跳过。'); return; }
                     var moved = Math.max(0, (o1.bytesBefore || 0) - (o1.bytesAfter || 0));
+                    var moved2 = Math.max(0, (o2.before || 0) - (o2.after || 0));
                     var saved = Math.max(0, (r.before || 0) - (r.after || 0));
                     var lines = [];
                     if (o1.sessions > 0) {
                         lines.push('· 整理了 ' + o1.sessions + ' 个会话、' + o1.images + ' 张图，消息体少了 ' + MB(moved));
                     }
-                    if (o1.skipped > 0) {
-                        lines.push('· 有 ' + o1.skipped + ' 个会话因为空间不足没动，腾出空间后再点一次');
+                    if (o2.changed > 0) {
+                        lines.push('· 背景／头像／贴纸里有 ' + o2.changed + ' 项搬进了媒体库，省出 ' + MB(moved2));
+                    }
+                    if (o1.skipped > 0 || o2.skipped > 0) {
+                        lines.push('· 有 ' + (o1.skipped + o2.skipped) + ' 项因为空间不足没动，腾出空间后再点一次');
                     }
                     if (r.changed > 0) {
                         lines.push('· 压小了 ' + r.changed + ' 张，省出 ' + MB(saved));
                     }
                     if (!lines.length) lines.push('没有需要整理的内容，当前已经是最省的状态。');
                     show(lines.join('\n') + '\n\n刷新页面后生效。');
-                    if (typeof showNotification === 'function') showNotification('整理完成，共省出约 ' + MB(moved + saved), 'success');
+                    if (typeof showNotification === 'function') showNotification('整理完成，共省出约 ' + MB(moved + moved2 + saved), 'success');
                     setTimeout(function () {
                         try { location.reload(); } catch (e) { }
                     }, 3000);
@@ -29923,7 +30201,7 @@ window.tryShowDailyGreeting = function() {
         if (!modal) return;
 
         var mc = modal.querySelector('.modal-content');
-        if (mc) mc.dataset.dm6Built = 'v9';
+        if (mc) mc.dataset.dm6Built = 'v10';
 
         if (_styleObserver) { _styleObserver.disconnect(); _styleObserver = null; }
         if (_contentObserver) { _contentObserver.disconnect(); _contentObserver = null; }
@@ -29938,7 +30216,7 @@ window.tryShowDailyGreeting = function() {
             _contentObserver = new MutationObserver(function () {
                 var mc2 = modal.querySelector('.modal-content');
                 if (mc2 && !isCorrect(mc2)) {
-                    mc2.dataset.dm6Built = 'v9';
+                    mc2.dataset.dm6Built = 'v10';
                     writeHTML(mc2);
                 }
             });
@@ -41360,6 +41638,11 @@ window.exitCollapseMode = function() {
             else if (rawCover && typeof rawCover === 'object' && typeof rawCover.cover === 'string') cov = rawCover.cover;
             else if (d && typeof d.cover === 'string') cov = d.cover;
             if (!cov && memoryCover) cov = memoryCover;
+            // P34：封面图在盘上是 m: 引用（媒体库统一去重），读出来要还原成真实地址
+            if (cov && window.MediaStore && MediaStore.isRef(cov)) {
+                var _real = MediaStore.resolve(cov);
+                if (typeof _real === 'string' && _real) cov = _real;
+            }
 
             _state = {
                 v: 2,
