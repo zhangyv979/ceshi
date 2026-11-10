@@ -40,6 +40,122 @@
 */
 !function(a){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=a();else if("function"==typeof define&&define.amd)define([],a);else{var b;b="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this,b.localforage=a()}}(function(){return function a(b,c,d){function e(g,h){if(!c[g]){if(!b[g]){var i="function"==typeof require&&require;if(!h&&i)return i(g,!0);if(f)return f(g,!0);var j=new Error("Cannot find module '"+g+"'");throw j.code="MODULE_NOT_FOUND",j}var k=c[g]={exports:{}};b[g][0].call(k.exports,function(a){var c=b[g][1][a];return e(c||a)},k,k.exports,a,b,c,d)}return c[g].exports}for(var f="function"==typeof require&&require,g=0;g<d.length;g++)e(d[g]);return e}({1:[function(a,b,c){(function(a){"use strict";function c(){k=!0;for(var a,b,c=l.length;c;){for(b=l,l=[],a=-1;++a<c;)b[a]();c=l.length}k=!1}function d(a){1!==l.push(a)||k||e()}var e,f=a.MutationObserver||a.WebKitMutationObserver;if(f){var g=0,h=new f(c),i=a.document.createTextNode("");h.observe(i,{characterData:!0}),e=function(){i.data=g=++g%2}}else if(a.setImmediate||void 0===a.MessageChannel)e="document"in a&&"onreadystatechange"in a.document.createElement("script")?function(){var b=a.document.createElement("script");b.onreadystatechange=function(){c(),b.onreadystatechange=null,b.parentNode.removeChild(b),b=null},a.document.documentElement.appendChild(b)}:function(){setTimeout(c,0)};else{var j=new a.MessageChannel;j.port1.onmessage=c,e=function(){j.port2.postMessage(0)}}var k,l=[];b.exports=d}).call(this,"undefined"!=typeof global?global:"undefined"!=typeof self?self:"undefined"!=typeof window?window:{})},{}],2:[function(a,b,c){"use strict";function d(){}function e(a){if("function"!=typeof a)throw new TypeError("resolver must be a function");this.state=s,this.queue=[],this.outcome=void 0,a!==d&&i(this,a)}function f(a,b,c){this.promise=a,"function"==typeof b&&(this.onFulfilled=b,this.callFulfilled=this.otherCallFulfilled),"function"==typeof c&&(this.onRejected=c,this.callRejected=this.otherCallRejected)}function g(a,b,c){o(function(){var d;try{d=b(c)}catch(b){return p.reject(a,b)}d===a?p.reject(a,new TypeError("Cannot resolve promise with itself")):p.resolve(a,d)})}function h(a){var b=a&&a.then;if(a&&("object"==typeof a||"function"==typeof a)&&"function"==typeof b)return function(){b.apply(a,arguments)}}function i(a,b){function c(b){f||(f=!0,p.reject(a,b))}function d(b){f||(f=!0,p.resolve(a,b))}function e(){b(d,c)}var f=!1,g=j(e);"error"===g.status&&c(g.value)}function j(a,b){var c={};try{c.value=a(b),c.status="success"}catch(a){c.status="error",c.value=a}return c}function k(a){return a instanceof this?a:p.resolve(new this(d),a)}function l(a){var b=new this(d);return p.reject(b,a)}function m(a){function b(a,b){function d(a){g[b]=a,++h!==e||f||(f=!0,p.resolve(j,g))}c.resolve(a).then(d,function(a){f||(f=!0,p.reject(j,a))})}var c=this;if("[object Array]"!==Object.prototype.toString.call(a))return this.reject(new TypeError("must be an array"));var e=a.length,f=!1;if(!e)return this.resolve([]);for(var g=new Array(e),h=0,i=-1,j=new this(d);++i<e;)b(a[i],i);return j}function n(a){function b(a){c.resolve(a).then(function(a){f||(f=!0,p.resolve(h,a))},function(a){f||(f=!0,p.reject(h,a))})}var c=this;if("[object Array]"!==Object.prototype.toString.call(a))return this.reject(new TypeError("must be an array"));var e=a.length,f=!1;if(!e)return this.resolve([]);for(var g=-1,h=new this(d);++g<e;)b(a[g]);return h}var o=a(1),p={},q=["REJECTED"],r=["FULFILLED"],s=["PENDING"];b.exports=e,e.prototype.catch=function(a){return this.then(null,a)},e.prototype.then=function(a,b){if("function"!=typeof a&&this.state===r||"function"!=typeof b&&this.state===q)return this;var c=new this.constructor(d);if(this.state!==s){g(c,this.state===r?a:b,this.outcome)}else this.queue.push(new f(c,a,b));return c},f.prototype.callFulfilled=function(a){p.resolve(this.promise,a)},f.prototype.otherCallFulfilled=function(a){g(this.promise,this.onFulfilled,a)},f.prototype.callRejected=function(a){p.reject(this.promise,a)},f.prototype.otherCallRejected=function(a){g(this.promise,this.onRejected,a)},p.resolve=function(a,b){var c=j(h,b);if("error"===c.status)return p.reject(a,c.value);var d=c.value;if(d)i(a,d);else{a.state=r,a.outcome=b;for(var e=-1,f=a.queue.length;++e<f;)a.queue[e].callFulfilled(b)}return a},p.reject=function(a,b){a.state=q,a.outcome=b;for(var c=-1,d=a.queue.length;++c<d;)a.queue[c].callRejected(b);return a},e.resolve=k,e.reject=l,e.all=m,e.race=n},{1:1}],3:[function(a,b,c){(function(b){"use strict";"function"!=typeof b.Promise&&(b.Promise=a(2))}).call(this,"undefined"!=typeof global?global:"undefined"!=typeof self?self:"undefined"!=typeof window?window:{})},{2:2}],4:[function(a,b,c){"use strict";function d(a,b){if(!(a instanceof b))throw new TypeError("Cannot call a class as a function")}function e(){try{if("undefined"!=typeof indexedDB)return indexedDB;if("undefined"!=typeof webkitIndexedDB)return webkitIndexedDB;if("undefined"!=typeof mozIndexedDB)return mozIndexedDB;if("undefined"!=typeof OIndexedDB)return OIndexedDB;if("undefined"!=typeof msIndexedDB)return msIndexedDB}catch(a){return}}function f(){try{if(!ua||!ua.open)return!1;var a="undefined"!=typeof openDatabase&&/(Safari|iPhone|iPad|iPod)/.test(navigator.userAgent)&&!/Chrome/.test(navigator.userAgent)&&!/BlackBerry/.test(navigator.platform),b="function"==typeof fetch&&-1!==fetch.toString().indexOf("[native code");return(!a||b)&&"undefined"!=typeof indexedDB&&"undefined"!=typeof IDBKeyRange}catch(a){return!1}}function g(a,b){a=a||[],b=b||{};try{return new Blob(a,b)}catch(f){if("TypeError"!==f.name)throw f;for(var c="undefined"!=typeof BlobBuilder?BlobBuilder:"undefined"!=typeof MSBlobBuilder?MSBlobBuilder:"undefined"!=typeof MozBlobBuilder?MozBlobBuilder:WebKitBlobBuilder,d=new c,e=0;e<a.length;e+=1)d.append(a[e]);return d.getBlob(b.type)}}function h(a,b){b&&a.then(function(a){b(null,a)},function(a){b(a)})}function i(a,b,c){"function"==typeof b&&a.then(b),"function"==typeof c&&a.catch(c)}function j(a){return"string"!=typeof a&&(console.warn(a+" used as a key, but it is not a string."),a=String(a)),a}function k(){if(arguments.length&&"function"==typeof arguments[arguments.length-1])return arguments[arguments.length-1]}function l(a){for(var b=a.length,c=new ArrayBuffer(b),d=new Uint8Array(c),e=0;e<b;e++)d[e]=a.charCodeAt(e);return c}function m(a){return new va(function(b){var c=a.transaction(wa,Ba),d=g([""]);c.objectStore(wa).put(d,"key"),c.onabort=function(a){a.preventDefault(),a.stopPropagation(),b(!1)},c.oncomplete=function(){var a=navigator.userAgent.match(/Chrome\/(\d+)/),c=navigator.userAgent.match(/Edge\//);b(c||!a||parseInt(a[1],10)>=43)}}).catch(function(){return!1})}function n(a){return"boolean"==typeof xa?va.resolve(xa):m(a).then(function(a){return xa=a})}function o(a){var b=ya[a.name],c={};c.promise=new va(function(a,b){c.resolve=a,c.reject=b}),b.deferredOperations.push(c),b.dbReady?b.dbReady=b.dbReady.then(function(){return c.promise}):b.dbReady=c.promise}function p(a){var b=ya[a.name],c=b.deferredOperations.pop();if(c)return c.resolve(),c.promise}function q(a,b){var c=ya[a.name],d=c.deferredOperations.pop();if(d)return d.reject(b),d.promise}function r(a,b){return new va(function(c,d){if(ya[a.name]=ya[a.name]||B(),a.db){if(!b)return c(a.db);o(a),a.db.close()}var e=[a.name];b&&e.push(a.version);var f=ua.open.apply(ua,e);b&&(f.onupgradeneeded=function(b){var c=f.result;try{c.createObjectStore(a.storeName),b.oldVersion<=1&&c.createObjectStore(wa)}catch(c){if("ConstraintError"!==c.name)throw c;console.warn('The database "'+a.name+'" has been upgraded from version '+b.oldVersion+" to version "+b.newVersion+', but the storage "'+a.storeName+'" already exists.')}}),f.onerror=function(a){a.preventDefault(),d(f.error)},f.onsuccess=function(){var b=f.result;b.onversionchange=function(a){a.target.close()},c(b),p(a)}})}function s(a){return r(a,!1)}function t(a){return r(a,!0)}function u(a,b){if(!a.db)return!0;var c=!a.db.objectStoreNames.contains(a.storeName),d=a.version<a.db.version,e=a.version>a.db.version;if(d&&(a.version!==b&&console.warn('The database "'+a.name+"\" can't be downgraded from version "+a.db.version+" to version "+a.version+"."),a.version=a.db.version),e||c){if(c){var f=a.db.version+1;f>a.version&&(a.version=f)}return!0}return!1}function v(a){return new va(function(b,c){var d=new FileReader;d.onerror=c,d.onloadend=function(c){var d=btoa(c.target.result||"");b({__local_forage_encoded_blob:!0,data:d,type:a.type})},d.readAsBinaryString(a)})}function w(a){return g([l(atob(a.data))],{type:a.type})}function x(a){return a&&a.__local_forage_encoded_blob}function y(a){var b=this,c=b._initReady().then(function(){var a=ya[b._dbInfo.name];if(a&&a.dbReady)return a.dbReady});return i(c,a,a),c}function z(a){o(a);for(var b=ya[a.name],c=b.forages,d=0;d<c.length;d++){var e=c[d];e._dbInfo.db&&(e._dbInfo.db.close(),e._dbInfo.db=null)}return a.db=null,s(a).then(function(b){return a.db=b,u(a)?t(a):b}).then(function(d){a.db=b.db=d;for(var e=0;e<c.length;e++)c[e]._dbInfo.db=d}).catch(function(b){throw q(a,b),b})}function A(a,b,c,d){void 0===d&&(d=1);try{var e=a.db.transaction(a.storeName,b);c(null,e)}catch(e){if(d>0&&(!a.db||"InvalidStateError"===e.name||"NotFoundError"===e.name))return va.resolve().then(function(){if(!a.db||"NotFoundError"===e.name&&!a.db.objectStoreNames.contains(a.storeName)&&a.version<=a.db.version)return a.db&&(a.version=a.db.version+1),t(a)}).then(function(){return z(a).then(function(){A(a,b,c,d-1)})}).catch(c);c(e)}}function B(){return{forages:[],db:null,dbReady:null,deferredOperations:[]}}function C(a){function b(){return va.resolve()}var c=this,d={db:null};if(a)for(var e in a)d[e]=a[e];var f=ya[d.name];f||(f=B(),ya[d.name]=f),f.forages.push(c),c._initReady||(c._initReady=c.ready,c.ready=y);for(var g=[],h=0;h<f.forages.length;h++){var i=f.forages[h];i!==c&&g.push(i._initReady().catch(b))}var j=f.forages.slice(0);return va.all(g).then(function(){return d.db=f.db,s(d)}).then(function(a){return d.db=a,u(d,c._defaultConfig.version)?t(d):a}).then(function(a){d.db=f.db=a,c._dbInfo=d;for(var b=0;b<j.length;b++){var e=j[b];e!==c&&(e._dbInfo.db=d.db,e._dbInfo.version=d.version)}})}function D(a,b){var c=this;a=j(a);var d=new va(function(b,d){c.ready().then(function(){A(c._dbInfo,Aa,function(e,f){if(e)return d(e);try{var g=f.objectStore(c._dbInfo.storeName),h=g.get(a);h.onsuccess=function(){var a=h.result;void 0===a&&(a=null),x(a)&&(a=w(a)),b(a)},h.onerror=function(){d(h.error)}}catch(a){d(a)}})}).catch(d)});return h(d,b),d}function E(a,b){var c=this,d=new va(function(b,d){c.ready().then(function(){A(c._dbInfo,Aa,function(e,f){if(e)return d(e);try{var g=f.objectStore(c._dbInfo.storeName),h=g.openCursor(),i=1;h.onsuccess=function(){var c=h.result;if(c){var d=c.value;x(d)&&(d=w(d));var e=a(d,c.key,i++);void 0!==e?b(e):c.continue()}else b()},h.onerror=function(){d(h.error)}}catch(a){d(a)}})}).catch(d)});return h(d,b),d}function F(a,b,c){var d=this;a=j(a);var e=new va(function(c,e){var f;d.ready().then(function(){return f=d._dbInfo,"[object Blob]"===za.call(b)?n(f.db).then(function(a){return a?b:v(b)}):b}).then(function(b){A(d._dbInfo,Ba,function(f,g){if(f)return e(f);try{var h=g.objectStore(d._dbInfo.storeName);null===b&&(b=void 0);var i=h.put(b,a);g.oncomplete=function(){void 0===b&&(b=null),c(b)},g.onabort=g.onerror=function(){var a=i.error?i.error:i.transaction.error;e(a)}}catch(a){e(a)}})}).catch(e)});return h(e,c),e}function G(a,b){var c=this;a=j(a);var d=new va(function(b,d){c.ready().then(function(){A(c._dbInfo,Ba,function(e,f){if(e)return d(e);try{var g=f.objectStore(c._dbInfo.storeName),h=g.delete(a);f.oncomplete=function(){b()},f.onerror=function(){d(h.error)},f.onabort=function(){var a=h.error?h.error:h.transaction.error;d(a)}}catch(a){d(a)}})}).catch(d)});return h(d,b),d}function H(a){var b=this,c=new va(function(a,c){b.ready().then(function(){A(b._dbInfo,Ba,function(d,e){if(d)return c(d);try{var f=e.objectStore(b._dbInfo.storeName),g=f.clear();e.oncomplete=function(){a()},e.onabort=e.onerror=function(){var a=g.error?g.error:g.transaction.error;c(a)}}catch(a){c(a)}})}).catch(c)});return h(c,a),c}function I(a){var b=this,c=new va(function(a,c){b.ready().then(function(){A(b._dbInfo,Aa,function(d,e){if(d)return c(d);try{var f=e.objectStore(b._dbInfo.storeName),g=f.count();g.onsuccess=function(){a(g.result)},g.onerror=function(){c(g.error)}}catch(a){c(a)}})}).catch(c)});return h(c,a),c}function J(a,b){var c=this,d=new va(function(b,d){if(a<0)return void b(null);c.ready().then(function(){A(c._dbInfo,Aa,function(e,f){if(e)return d(e);try{var g=f.objectStore(c._dbInfo.storeName),h=!1,i=g.openKeyCursor();i.onsuccess=function(){var c=i.result;if(!c)return void b(null);0===a?b(c.key):h?b(c.key):(h=!0,c.advance(a))},i.onerror=function(){d(i.error)}}catch(a){d(a)}})}).catch(d)});return h(d,b),d}function K(a){var b=this,c=new va(function(a,c){b.ready().then(function(){A(b._dbInfo,Aa,function(d,e){if(d)return c(d);try{var f=e.objectStore(b._dbInfo.storeName),g=f.openKeyCursor(),h=[];g.onsuccess=function(){var b=g.result;if(!b)return void a(h);h.push(b.key),b.continue()},g.onerror=function(){c(g.error)}}catch(a){c(a)}})}).catch(c)});return h(c,a),c}function L(a,b){b=k.apply(this,arguments);var c=this.config();a="function"!=typeof a&&a||{},a.name||(a.name=a.name||c.name,a.storeName=a.storeName||c.storeName);var d,e=this;if(a.name){var f=a.name===c.name&&e._dbInfo.db,g=f?va.resolve(e._dbInfo.db):s(a).then(function(b){var c=ya[a.name],d=c.forages;c.db=b;for(var e=0;e<d.length;e++)d[e]._dbInfo.db=b;return b});d=a.storeName?g.then(function(b){if(b.objectStoreNames.contains(a.storeName)){var c=b.version+1;o(a);var d=ya[a.name],e=d.forages;b.close();for(var f=0;f<e.length;f++){var g=e[f];g._dbInfo.db=null,g._dbInfo.version=c}return new va(function(b,d){var e=ua.open(a.name,c);e.onerror=function(a){e.result.close(),d(a)},e.onupgradeneeded=function(){e.result.deleteObjectStore(a.storeName)},e.onsuccess=function(){var a=e.result;a.close(),b(a)}}).then(function(a){d.db=a;for(var b=0;b<e.length;b++){var c=e[b];c._dbInfo.db=a,p(c._dbInfo)}}).catch(function(b){throw(q(a,b)||va.resolve()).catch(function(){}),b})}}):g.then(function(b){o(a);var c=ya[a.name],d=c.forages;b.close();for(var e=0;e<d.length;e++){d[e]._dbInfo.db=null}return new va(function(b,c){var d=ua.deleteDatabase(a.name);d.onerror=function(){var a=d.result;a&&a.close(),c(d.error)},d.onblocked=function(){console.warn('dropInstance blocked for database "'+a.name+'" until all open connections are closed')},d.onsuccess=function(){var a=d.result;a&&a.close(),b(a)}}).then(function(a){c.db=a;for(var b=0;b<d.length;b++)p(d[b]._dbInfo)}).catch(function(b){throw(q(a,b)||va.resolve()).catch(function(){}),b})})}else d=va.reject("Invalid arguments");return h(d,b),d}function M(){return"function"==typeof openDatabase}function N(a){var b,c,d,e,f,g=.75*a.length,h=a.length,i=0;"="===a[a.length-1]&&(g--,"="===a[a.length-2]&&g--);var j=new ArrayBuffer(g),k=new Uint8Array(j);for(b=0;b<h;b+=4)c=Da.indexOf(a[b]),d=Da.indexOf(a[b+1]),e=Da.indexOf(a[b+2]),f=Da.indexOf(a[b+3]),k[i++]=c<<2|d>>4,k[i++]=(15&d)<<4|e>>2,k[i++]=(3&e)<<6|63&f;return j}function O(a){var b,c=new Uint8Array(a),d="";for(b=0;b<c.length;b+=3)d+=Da[c[b]>>2],d+=Da[(3&c[b])<<4|c[b+1]>>4],d+=Da[(15&c[b+1])<<2|c[b+2]>>6],d+=Da[63&c[b+2]];return c.length%3==2?d=d.substring(0,d.length-1)+"=":c.length%3==1&&(d=d.substring(0,d.length-2)+"=="),d}function P(a,b){var c="";if(a&&(c=Ua.call(a)),a&&("[object ArrayBuffer]"===c||a.buffer&&"[object ArrayBuffer]"===Ua.call(a.buffer))){var d,e=Ga;a instanceof ArrayBuffer?(d=a,e+=Ia):(d=a.buffer,"[object Int8Array]"===c?e+=Ka:"[object Uint8Array]"===c?e+=La:"[object Uint8ClampedArray]"===c?e+=Ma:"[object Int16Array]"===c?e+=Na:"[object Uint16Array]"===c?e+=Pa:"[object Int32Array]"===c?e+=Oa:"[object Uint32Array]"===c?e+=Qa:"[object Float32Array]"===c?e+=Ra:"[object Float64Array]"===c?e+=Sa:b(new Error("Failed to get type for BinaryArray"))),b(e+O(d))}else if("[object Blob]"===c){var f=new FileReader;f.onload=function(){var c=Ea+a.type+"~"+O(this.result);b(Ga+Ja+c)},f.readAsArrayBuffer(a)}else try{b(JSON.stringify(a))}catch(c){console.error("Couldn't convert value into a JSON string: ",a),b(null,c)}}function Q(a){if(a.substring(0,Ha)!==Ga)return JSON.parse(a);var b,c=a.substring(Ta),d=a.substring(Ha,Ta);if(d===Ja&&Fa.test(c)){var e=c.match(Fa);b=e[1],c=c.substring(e[0].length)}var f=N(c);switch(d){case Ia:return f;case Ja:return g([f],{type:b});case Ka:return new Int8Array(f);case La:return new Uint8Array(f);case Ma:return new Uint8ClampedArray(f);case Na:return new Int16Array(f);case Pa:return new Uint16Array(f);case Oa:return new Int32Array(f);case Qa:return new Uint32Array(f);case Ra:return new Float32Array(f);case Sa:return new Float64Array(f);default:throw new Error("Unkown type: "+d)}}function R(a,b,c,d){a.executeSql("CREATE TABLE IF NOT EXISTS "+b.storeName+" (id INTEGER PRIMARY KEY, key unique, value)",[],c,d)}function S(a){var b=this,c={db:null};if(a)for(var d in a)c[d]="string"!=typeof a[d]?a[d].toString():a[d];var e=new va(function(a,d){try{c.db=openDatabase(c.name,String(c.version),c.description,c.size)}catch(a){return d(a)}c.db.transaction(function(e){R(e,c,function(){b._dbInfo=c,a()},function(a,b){d(b)})},d)});return c.serializer=Va,e}function T(a,b,c,d,e,f){a.executeSql(c,d,e,function(a,g){g.code===g.SYNTAX_ERR?a.executeSql("SELECT name FROM sqlite_master WHERE type='table' AND name = ?",[b.storeName],function(a,h){h.rows.length?f(a,g):R(a,b,function(){a.executeSql(c,d,e,f)},f)},f):f(a,g)},f)}function U(a,b){var c=this;a=j(a);var d=new va(function(b,d){c.ready().then(function(){var e=c._dbInfo;e.db.transaction(function(c){T(c,e,"SELECT * FROM "+e.storeName+" WHERE key = ? LIMIT 1",[a],function(a,c){var d=c.rows.length?c.rows.item(0).value:null;d&&(d=e.serializer.deserialize(d)),b(d)},function(a,b){d(b)})})}).catch(d)});return h(d,b),d}function V(a,b){var c=this,d=new va(function(b,d){c.ready().then(function(){var e=c._dbInfo;e.db.transaction(function(c){T(c,e,"SELECT * FROM "+e.storeName,[],function(c,d){for(var f=d.rows,g=f.length,h=0;h<g;h++){var i=f.item(h),j=i.value;if(j&&(j=e.serializer.deserialize(j)),void 0!==(j=a(j,i.key,h+1)))return void b(j)}b()},function(a,b){d(b)})})}).catch(d)});return h(d,b),d}function W(a,b,c,d){var e=this;a=j(a);var f=new va(function(f,g){e.ready().then(function(){void 0===b&&(b=null);var h=b,i=e._dbInfo;i.serializer.serialize(b,function(b,j){j?g(j):i.db.transaction(function(c){T(c,i,"INSERT OR REPLACE INTO "+i.storeName+" (key, value) VALUES (?, ?)",[a,b],function(){f(h)},function(a,b){g(b)})},function(b){if(b.code===b.QUOTA_ERR){if(d>0)return void f(W.apply(e,[a,h,c,d-1]));g(b)}})})}).catch(g)});return h(f,c),f}function X(a,b,c){return W.apply(this,[a,b,c,1])}function Y(a,b){var c=this;a=j(a);var d=new va(function(b,d){c.ready().then(function(){var e=c._dbInfo;e.db.transaction(function(c){T(c,e,"DELETE FROM "+e.storeName+" WHERE key = ?",[a],function(){b()},function(a,b){d(b)})})}).catch(d)});return h(d,b),d}function Z(a){var b=this,c=new va(function(a,c){b.ready().then(function(){var d=b._dbInfo;d.db.transaction(function(b){T(b,d,"DELETE FROM "+d.storeName,[],function(){a()},function(a,b){c(b)})})}).catch(c)});return h(c,a),c}function $(a){var b=this,c=new va(function(a,c){b.ready().then(function(){var d=b._dbInfo;d.db.transaction(function(b){T(b,d,"SELECT COUNT(key) as c FROM "+d.storeName,[],function(b,c){var d=c.rows.item(0).c;a(d)},function(a,b){c(b)})})}).catch(c)});return h(c,a),c}function _(a,b){var c=this,d=new va(function(b,d){c.ready().then(function(){var e=c._dbInfo;e.db.transaction(function(c){T(c,e,"SELECT key FROM "+e.storeName+" WHERE id = ? LIMIT 1",[a+1],function(a,c){var d=c.rows.length?c.rows.item(0).key:null;b(d)},function(a,b){d(b)})})}).catch(d)});return h(d,b),d}function aa(a){var b=this,c=new va(function(a,c){b.ready().then(function(){var d=b._dbInfo;d.db.transaction(function(b){T(b,d,"SELECT key FROM "+d.storeName,[],function(b,c){for(var d=[],e=0;e<c.rows.length;e++)d.push(c.rows.item(e).key);a(d)},function(a,b){c(b)})})}).catch(c)});return h(c,a),c}function ba(a){return new va(function(b,c){a.transaction(function(d){d.executeSql("SELECT name FROM sqlite_master WHERE type='table' AND name <> '__WebKitDatabaseInfoTable__'",[],function(c,d){for(var e=[],f=0;f<d.rows.length;f++)e.push(d.rows.item(f).name);b({db:a,storeNames:e})},function(a,b){c(b)})},function(a){c(a)})})}function ca(a,b){b=k.apply(this,arguments);var c=this.config();a="function"!=typeof a&&a||{},a.name||(a.name=a.name||c.name,a.storeName=a.storeName||c.storeName);var d,e=this;return d=a.name?new va(function(b){var d;d=a.name===c.name?e._dbInfo.db:openDatabase(a.name,"","",0),b(a.storeName?{db:d,storeNames:[a.storeName]}:ba(d))}).then(function(a){return new va(function(b,c){a.db.transaction(function(d){function e(a){return new va(function(b,c){d.executeSql("DROP TABLE IF EXISTS "+a,[],function(){b()},function(a,b){c(b)})})}for(var f=[],g=0,h=a.storeNames.length;g<h;g++)f.push(e(a.storeNames[g]));va.all(f).then(function(){b()}).catch(function(a){c(a)})},function(a){c(a)})})}):va.reject("Invalid arguments"),h(d,b),d}function da(){try{return"undefined"!=typeof localStorage&&"setItem"in localStorage&&!!localStorage.setItem}catch(a){return!1}}function ea(a,b){var c=a.name+"/";return a.storeName!==b.storeName&&(c+=a.storeName+"/"),c}function fa(){var a="_localforage_support_test";try{return localStorage.setItem(a,!0),localStorage.removeItem(a),!1}catch(a){return!0}}function ga(){return!fa()||localStorage.length>0}function ha(a){var b=this,c={};if(a)for(var d in a)c[d]=a[d];return c.keyPrefix=ea(a,b._defaultConfig),ga()?(b._dbInfo=c,c.serializer=Va,va.resolve()):va.reject()}function ia(a){var b=this,c=b.ready().then(function(){for(var a=b._dbInfo.keyPrefix,c=localStorage.length-1;c>=0;c--){var d=localStorage.key(c);0===d.indexOf(a)&&localStorage.removeItem(d)}});return h(c,a),c}function ja(a,b){var c=this;a=j(a);var d=c.ready().then(function(){var b=c._dbInfo,d=localStorage.getItem(b.keyPrefix+a);return d&&(d=b.serializer.deserialize(d)),d});return h(d,b),d}function ka(a,b){var c=this,d=c.ready().then(function(){for(var b=c._dbInfo,d=b.keyPrefix,e=d.length,f=localStorage.length,g=1,h=0;h<f;h++){var i=localStorage.key(h);if(0===i.indexOf(d)){var j=localStorage.getItem(i);if(j&&(j=b.serializer.deserialize(j)),void 0!==(j=a(j,i.substring(e),g++)))return j}}});return h(d,b),d}function la(a,b){var c=this,d=c.ready().then(function(){var b,d=c._dbInfo;try{b=localStorage.key(a)}catch(a){b=null}return b&&(b=b.substring(d.keyPrefix.length)),b});return h(d,b),d}function ma(a){var b=this,c=b.ready().then(function(){for(var a=b._dbInfo,c=localStorage.length,d=[],e=0;e<c;e++){var f=localStorage.key(e);0===f.indexOf(a.keyPrefix)&&d.push(f.substring(a.keyPrefix.length))}return d});return h(c,a),c}function na(a){var b=this,c=b.keys().then(function(a){return a.length});return h(c,a),c}function oa(a,b){var c=this;a=j(a);var d=c.ready().then(function(){var b=c._dbInfo;localStorage.removeItem(b.keyPrefix+a)});return h(d,b),d}function pa(a,b,c){var d=this;a=j(a);var e=d.ready().then(function(){void 0===b&&(b=null);var c=b;return new va(function(e,f){var g=d._dbInfo;g.serializer.serialize(b,function(b,d){if(d)f(d);else try{localStorage.setItem(g.keyPrefix+a,b),e(c)}catch(a){"QuotaExceededError"!==a.name&&"NS_ERROR_DOM_QUOTA_REACHED"!==a.name||f(a),f(a)}})})});return h(e,c),e}function qa(a,b){if(b=k.apply(this,arguments),a="function"!=typeof a&&a||{},!a.name){var c=this.config();a.name=a.name||c.name,a.storeName=a.storeName||c.storeName}var d,e=this;return d=a.name?new va(function(b){b(a.storeName?ea(a,e._defaultConfig):a.name+"/")}).then(function(a){for(var b=localStorage.length-1;b>=0;b--){var c=localStorage.key(b);0===c.indexOf(a)&&localStorage.removeItem(c)}}):va.reject("Invalid arguments"),h(d,b),d}function ra(a,b){a[b]=function(){var c=arguments;return a.ready().then(function(){return a[b].apply(a,c)})}}function sa(){for(var a=1;a<arguments.length;a++){var b=arguments[a];if(b)for(var c in b)b.hasOwnProperty(c)&&($a(b[c])?arguments[0][c]=b[c].slice():arguments[0][c]=b[c])}return arguments[0]}var ta="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(a){return typeof a}:function(a){return a&&"function"==typeof Symbol&&a.constructor===Symbol&&a!==Symbol.prototype?"symbol":typeof a},ua=e();"undefined"==typeof Promise&&a(3);var va=Promise,wa="local-forage-detect-blob-support",xa=void 0,ya={},za=Object.prototype.toString,Aa="readonly",Ba="readwrite",Ca={_driver:"asyncStorage",_initStorage:C,_support:f(),iterate:E,getItem:D,setItem:F,removeItem:G,clear:H,length:I,key:J,keys:K,dropInstance:L},Da="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",Ea="~~local_forage_type~",Fa=/^~~local_forage_type~([^~]+)~/,Ga="__lfsc__:",Ha=Ga.length,Ia="arbf",Ja="blob",Ka="si08",La="ui08",Ma="uic8",Na="si16",Oa="si32",Pa="ur16",Qa="ui32",Ra="fl32",Sa="fl64",Ta=Ha+Ia.length,Ua=Object.prototype.toString,Va={serialize:P,deserialize:Q,stringToBuffer:N,bufferToString:O},Wa={_driver:"webSQLStorage",_initStorage:S,_support:M(),iterate:V,getItem:U,setItem:X,removeItem:Y,clear:Z,length:$,key:_,keys:aa,dropInstance:ca},Xa={_driver:"localStorageWrapper",_initStorage:ha,_support:da(),iterate:ka,getItem:ja,setItem:pa,removeItem:oa,clear:ia,length:na,key:la,keys:ma,dropInstance:qa},Ya=function(a,b){return a===b||"number"==typeof a&&"number"==typeof b&&isNaN(a)&&isNaN(b)},Za=function(a,b){for(var c=a.length,d=0;d<c;){if(Ya(a[d],b))return!0;d++}return!1},$a=Array.isArray||function(a){return"[object Array]"===Object.prototype.toString.call(a)},_a={},ab={},bb={INDEXEDDB:Ca,WEBSQL:Wa,LOCALSTORAGE:Xa},cb=[bb.INDEXEDDB._driver,bb.WEBSQL._driver,bb.LOCALSTORAGE._driver],db=["dropInstance"],eb=["clear","getItem","iterate","key","keys","length","removeItem","setItem"].concat(db),fb={description:"",driver:cb.slice(),name:"localforage",size:4980736,storeName:"keyvaluepairs",version:1},gb=function(){function a(b){d(this,a);for(var c in bb)if(bb.hasOwnProperty(c)){var e=bb[c],f=e._driver;this[c]=f,_a[f]||this.defineDriver(e)}this._defaultConfig=sa({},fb),this._config=sa({},this._defaultConfig,b),this._driverSet=null,this._initDriver=null,this._ready=!1,this._dbInfo=null,this._wrapLibraryMethodsWithReady(),this.setDriver(this._config.driver).catch(function(){})}return a.prototype.config=function(a){if("object"===(void 0===a?"undefined":ta(a))){if(this._ready)return new Error("Can't call config() after localforage has been used.");for(var b in a){if("storeName"===b&&(a[b]=a[b].replace(/\W/g,"_")),"version"===b&&"number"!=typeof a[b])return new Error("Database version must be a number.");this._config[b]=a[b]}return!("driver"in a&&a.driver)||this.setDriver(this._config.driver)}return"string"==typeof a?this._config[a]:this._config},a.prototype.defineDriver=function(a,b,c){var d=new va(function(b,c){try{var d=a._driver,e=new Error("Custom driver not compliant; see https://mozilla.github.io/localForage/#definedriver");if(!a._driver)return void c(e);for(var f=eb.concat("_initStorage"),g=0,i=f.length;g<i;g++){var j=f[g];if((!Za(db,j)||a[j])&&"function"!=typeof a[j])return void c(e)}(function(){for(var b=function(a){return function(){var b=new Error("Method "+a+" is not implemented by the current driver"),c=va.reject(b);return h(c,arguments[arguments.length-1]),c}},c=0,d=db.length;c<d;c++){var e=db[c];a[e]||(a[e]=b(e))}})();var k=function(c){_a[d]&&console.info("Redefining LocalForage driver: "+d),_a[d]=a,ab[d]=c,b()};"_support"in a?a._support&&"function"==typeof a._support?a._support().then(k,c):k(!!a._support):k(!0)}catch(a){c(a)}});return i(d,b,c),d},a.prototype.driver=function(){return this._driver||null},a.prototype.getDriver=function(a,b,c){var d=_a[a]?va.resolve(_a[a]):va.reject(new Error("Driver not found."));return i(d,b,c),d},a.prototype.getSerializer=function(a){var b=va.resolve(Va);return i(b,a),b},a.prototype.ready=function(a){var b=this,c=b._driverSet.then(function(){return null===b._ready&&(b._ready=b._initDriver()),b._ready});return i(c,a,a),c},a.prototype.setDriver=function(a,b,c){function d(){g._config.driver=g.driver()}function e(a){return g._extend(a),d(),g._ready=g._initStorage(g._config),g._ready}function f(a){return function(){function b(){for(;c<a.length;){var f=a[c];return c++,g._dbInfo=null,g._ready=null,g.getDriver(f).then(e).catch(b)}d();var h=new Error("No available storage method found.");return g._driverSet=va.reject(h),g._driverSet}var c=0;return b()}}var g=this;$a(a)||(a=[a]);var h=this._getSupportedDrivers(a),j=null!==this._driverSet?this._driverSet.catch(function(){return va.resolve()}):va.resolve();return this._driverSet=j.then(function(){var a=h[0];return g._dbInfo=null,g._ready=null,g.getDriver(a).then(function(a){g._driver=a._driver,d(),g._wrapLibraryMethodsWithReady(),g._initDriver=f(h)})}).catch(function(){d();var a=new Error("No available storage method found.");return g._driverSet=va.reject(a),g._driverSet}),i(this._driverSet,b,c),this._driverSet},a.prototype.supports=function(a){return!!ab[a]},a.prototype._extend=function(a){sa(this,a)},a.prototype._getSupportedDrivers=function(a){for(var b=[],c=0,d=a.length;c<d;c++){var e=a[c];this.supports(e)&&b.push(e)}return b},a.prototype._wrapLibraryMethodsWithReady=function(){for(var a=0,b=eb.length;a<b;a++)ra(this,eb[a])},a.prototype.createInstance=function(b){return new a(b)},a}(),hb=new gb;b.exports=hb},{3:3}]},{},[4])(4)});
 </script>
+    <!-- 必须紧跟 localforage：库名要在任何人使用之前钉死，否则数据会写到默认库（P30） -->
+    <script data-src="js/storage-init.js">
+/* ===== js/storage-init.js ===== */
+/**
+ * js/storage-init.js
+ * 存储前置初始化 —— 必须在「任何模块用到 localforage 之前」执行。
+ * ------------------------------------------------------------------
+ * 为什么需要这个文件（P30 事故复盘）：
+ *   localforage 的 config() 只有在「还没被用过」时才生效，一旦先读过一次数据，
+ *   再调 config() 只会返回一个 Error，库名仍然是默认的 localforage/keyvaluepairs。
+ *
+ *   本站在 utils.js 里 config({name:'ChatApp_V3', storeName:'chat_data'})，
+ *   但 P4 之后引入了 mochi 扩展，扩展脚本排在 utils.js 前面，启动时就用了 localforage，
+ *   于是 config 失效 —— 全站改读写默认库 localforage，老数据还躺在 ChatApp_V3 里，
+ *   表现就是「更新后字卡 / 心情手帐 / 信封全没了」，同时还会新建一个空会话。
+ *
+ * 这个文件做两件事：
+ *   1. 紧跟 localforage.min.js 之后把库名钉死成 ChatApp_V3 / chat_data；
+ *   2. 把「坏版本期间」误写进默认库 localforage 的数据搬回主库（只补缺、不覆盖）。
+ */
+(function () {
+    'use strict';
+
+    if (typeof localforage === 'undefined') {
+        console.warn('[storage] localforage 未加载，无法初始化存储');
+        return;
+    }
+
+    var CFG = {
+        driver: [localforage.INDEXEDDB, localforage.WEBSQL, localforage.LOCALSTORAGE],
+        name: 'ChatApp_V3',
+        version: 1.0,
+        storeName: 'chat_data',
+        description: 'Storage for Chat App V3'
+    };
+
+    // ---- 1. 钉死库名 ----
+    try {
+        localforage.config(CFG);
+    } catch (e) {
+        console.warn('[storage] localforage.config 失败', e);
+    }
+
+    try {
+        var cur = localforage.config() || {};
+        if (cur.name !== CFG.name || cur.storeName !== CFG.storeName) {
+            // 走到这里说明有脚本比本文件更早用了 localforage，config 已经失效
+            console.error('[storage] 库名未生效，当前为', cur.name + '/' + cur.storeName,
+                '（应为 ' + CFG.name + '/' + CFG.storeName + '）');
+        }
+    } catch (e) { }
+
+    /**
+     * 2. 旧库救援：坏版本把数据写进了默认库 localforage。
+     *    这里把其中的 CHAT_APP_V3_* 键搬回主库。
+     *    规则：
+     *      - 主库没有这个键 → 直接搬过来
+     *      - 主库已有 → 保留主库（老数据优先）；只有 sessionList 做并集，避免会话丢失
+     *      - 全部搬完后在旧库写一个标记，之后不再重复搬
+     */
+    var FLAG = 'CHAT_APP_V3_legacy_db_merged';
+
+    window.__lfRescue = (async function () {
+        try {
+            if (typeof indexedDB === 'undefined' || !indexedDB.databases) return false;
+            var dbs = await indexedDB.databases();
+            var hasLegacy = dbs.some(function (d) { return d && d.name === 'localforage'; });
+            if (!hasLegacy) return false;
+
+            var legacy = localforage.createInstance({ name: 'localforage', storeName: 'keyvaluepairs' });
+            if (await legacy.getItem(FLAG)) return false;
+
+            var keys = await legacy.keys();
+            if (!keys || !keys.length) return false;
+
+            var moved = 0;
+            for (var i = 0; i < keys.length; i++) {
+                var k = keys[i];
+                if (!k || k === FLAG || k.indexOf('CHAT_APP_V3_') !== 0) continue;
+
+                var curr = await localforage.getItem(k);
+                if (curr === null || typeof curr === 'undefined') {
+                    var v = await legacy.getItem(k);
+                    if (v !== null && typeof v !== 'undefined') {
+                        await localforage.setItem(k, v);
+                        moved++;
+                    }
+                    continue;
+                }
+
+                // sessionList 做并集：老会话 + 坏版本里新建的会话都留着
+                if (/sessionList$/.test(k) && Array.isArray(curr)) {
+                    var v2 = await legacy.getItem(k);
+                    if (Array.isArray(v2) && v2.length) {
+                        var seen = {};
+                        curr.forEach(function (s) { if (s && s.id) seen[s.id] = 1; });
+                        var add = v2.filter(function (s) { return s && s.id && !seen[s.id]; });
+                        if (add.length) {
+                            await localforage.setItem(k, curr.concat(add));
+                            moved += add.length;
+                        }
+                    }
+                }
+            }
+
+            await legacy.setItem(FLAG, Date.now());
+            if (moved) console.info('[storage] 已从旧库搬回 ' + moved + ' 项数据');
+            return moved > 0;
+        } catch (e) {
+            console.warn('[storage] 旧库数据搬回失败（不影响主流程）', e);
+            return false;
+        }
+    })();
+})();
+
+</script>
     <script data-src="vendor/lib/jszip.min.js">
 /* ===== vendor/lib/jszip.min.js ===== */
 /*!
@@ -13115,6 +13231,633 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <div id="dg-editor-modal" style="display:none;"></div>
     <!-- == 核心层 == -->
+    <script data-src="js/image-codec.js">
+/* ===== js/image-codec.js ===== */
+/* P32 图片入库编码器：按用途选分辨率 / 格式，不再一律 JPEG
+ *
+ * 旧实现（optimizeImage）的三个毛病：
+ *   1. 只按 width 缩 —— 竖图、长截图根本没动过
+ *   2. 一律 toDataURL('image/jpeg') —— 透明 PNG（贴纸、图形）会变黑底
+ *   3. file.size < 300KB 直接放行 —— 一堆小图原样进库
+ *
+ * 这里的规则（都按「短边」算，不是按宽度也不是按长边）：
+ *   photo    照片 / 聊天图   短边 800   webp 0.75
+ *   text     截图 / 文字图   短边 800   webp 0.82（PNG 源保留 alpha）
+ *   sticker  贴纸（要透明）  短边 512   webp 0.90，绝不转 JPEG
+ *   avatar   头像            短边 640   webp 0.88
+ *
+ * webp 编码不可用时（老 WebView 会静默回落 PNG）自动退回 JPEG/PNG，
+ * 所以对外只承诺「尽量小」，不承诺「一定是 webp」。
+ */
+(function () {
+    'use strict';
+
+    var PRESET = {
+        // 按「短边」缩放，不是按宽度。
+        // 老逻辑只比 width，于是 750×3000 这种窄竖图一个像素都不缩；
+        // 按短边 800 收，横图得到 800×533、竖图得到 800×2133，任何方向都不低于老参数的清晰度。
+        // 真正省下来的靠编码（webp 0.75 的观感约等于 JPEG 0.85，体积却小一大截）。
+        photo: { shortEdge: 800, quality: 0.75, allowJpeg: true },
+        text: { shortEdge: 800, quality: 0.82, allowJpeg: false },
+        sticker: { shortEdge: 512, quality: 0.9, allowJpeg: false },
+        avatar: { shortEdge: 640, quality: 0.88, allowJpeg: false }
+    };
+
+    // 极端长图（几千像素高的聊天截图）兜底，免得一张图吃掉几十 MB
+    var LONG_EDGE_CAP = 6000;
+
+    // 低于这个体积、且尺寸没超限的图，直接放行不重编码（避免白白掉一次画质）
+    var SKIP_BYTES = 180 * 1024;
+
+    var _webp = null;   // null = 还没测过
+
+    /** 探测浏览器是否真能编码 webp（不支持时 toDataURL 会悄悄给 PNG） */
+    function canWebp() {
+        if (_webp !== null) return _webp;
+        try {
+            var c = document.createElement('canvas');
+            c.width = c.height = 1;
+            _webp = c.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+        } catch (e) {
+            _webp = false;
+        }
+        return _webp;
+    }
+
+    function mimeOf(src) {
+        if (typeof src !== 'string') return '';
+        var m = /^data:([^;,]+)/.exec(src);
+        return m ? m[1].toLowerCase() : '';
+    }
+
+    function bytesOfDataUrl(s) {
+        if (typeof s !== 'string') return 0;
+        var i = s.indexOf(',');
+        if (i < 0) return s.length;
+        return Math.floor((s.length - i - 1) * 0.75);
+    }
+
+    function readAsDataUrl(blob) {
+        return new Promise(function (resolve, reject) {
+            var r = new FileReader();
+            r.onload = function (e) { resolve(e.target.result); };
+            r.onerror = reject;
+            r.readAsDataURL(blob);
+        });
+    }
+
+    function loadImage(src) {
+        return new Promise(function (resolve, reject) {
+            var img = new Image();
+            img.onload = function () { resolve(img); };
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
+
+    /** 主入口：src 可以是 File / Blob / dataURL，返回编码后的 dataURL */
+    function encode(src, modeOrOpts) {
+        var opts = typeof modeOrOpts === 'string'
+            ? (PRESET[modeOrOpts] || PRESET.photo)
+            : (modeOrOpts || PRESET.photo);
+
+        var capEdge = opts.shortEdge || 800;
+        var quality = typeof opts.quality === 'number' ? opts.quality : 0.82;
+        var allowJpeg = opts.allowJpeg !== false;
+
+        var isBlob = src && typeof src === 'object' && typeof src.size === 'number';
+        var srcSize = isBlob ? src.size : bytesOfDataUrl(src);
+
+        return (isBlob ? readAsDataUrl(src) : Promise.resolve(src))
+            .then(function (dataUrl) {
+                if (!dataUrl || dataUrl.indexOf('data:image') !== 0) {
+                    // 不是图片（或已是 http 链接），原样交回
+                    return dataUrl;
+                }
+                var srcMime = mimeOf(dataUrl);
+                // 源本身是 PNG 就按「可能有透明通道」处理，绝不转 JPEG
+                var keepAlpha = srcMime === 'image/png' || srcMime === 'image/webp' || srcMime === 'image/gif';
+
+                return loadImage(dataUrl).then(function (img) {
+                    var w = img.naturalWidth || img.width;
+                    var h = img.naturalHeight || img.height;
+                    if (!w || !h) return dataUrl;
+
+                    var longEdge = Math.max(w, h);
+                    var shortEdge = Math.min(w, h);
+                    // 先按短边收，再给极端长图兜一刀
+                    var scale = shortEdge > capEdge ? capEdge / shortEdge : 1;
+                    if (longEdge * scale > LONG_EDGE_CAP) scale = LONG_EDGE_CAP / longEdge;
+                    var nw = Math.max(1, Math.round(w * scale));
+                    var nh = Math.max(1, Math.round(h * scale));
+
+                    // 尺寸没超、体积也不大 —— 直接用原图，省一次重编码
+                    if (scale === 1 && srcSize > 0 && srcSize < SKIP_BYTES) return dataUrl;
+
+                    var canvas = document.createElement('canvas');
+                    canvas.width = nw;
+                    canvas.height = nh;
+                    var ctx = canvas.getContext('2d');
+                    if (!ctx) return dataUrl;
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    // 透明图先铺底色会让 alpha 失效，这里只在需要时清一次画布
+                    ctx.clearRect(0, 0, nw, nh);
+                    ctx.drawImage(img, 0, 0, nw, nh);
+
+                    var out = null;
+                    if (canWebp()) {
+                        out = canvas.toDataURL('image/webp', quality);
+                        if (out.indexOf('data:image/webp') !== 0) out = null;
+                    }
+                    if (!out) {
+                        if (keepAlpha) {
+                            out = canvas.toDataURL('image/png');
+                        } else if (allowJpeg) {
+                            out = canvas.toDataURL('image/jpeg', quality);
+                        } else {
+                            out = canvas.toDataURL('image/png');
+                        }
+                    }
+                    // 万一缩完反而更大（极小的图），保留原图
+                    if (srcSize > 0 && bytesOfDataUrl(out) > srcSize && scale === 1) return dataUrl;
+                    return out;
+                });
+            })
+            .catch(function (e) {
+                console.warn('[imgcodec] 编码失败，回退原图', e);
+                return isBlob ? readAsDataUrl(src) : src;
+            });
+    }
+
+    /** 给 backup / 设置页统计用 */
+    function estimate(dataUrl) {
+        return bytesOfDataUrl(dataUrl);
+    }
+
+    window.ImageCodec = {
+        version: '1.0.0-p32',
+        PRESET: PRESET,
+        encode: encode,
+        canWebp: canWebp,
+        estimate: estimate,
+        mimeOf: mimeOf
+    };
+})();
+
+</script>
+    <script data-src="js/media-store.js">
+/* ===== js/media-store.js ===== */
+/* P31 媒体外置：把内联的 data URL 收敛成「一份媒体 + 多处引用」
+ *
+ * 背景：聊天里的图片/贴纸是 base64 直接塞在每条消息里的。
+ * 同一张图被用 30 次，就在 IndexedDB 里存 30 份 —— 这是占用膨胀的主因。
+ *
+ * 做法：
+ *   - 落盘前把 data URL 换成 `m:<hash>`，真正的图只留一份在 CHAT_APP_V3_media
+ *   - 渲染前把引用还原成 data URL（每条消息临时浅拷贝，不污染内存）
+ *   - 还原后同一个 data URL 在内存里是同一个字符串对象，也不会重复占内存
+ *
+ * 约定：只处理 > 2KB 的 data:image / data:audio / data:video。
+ *       http(s) 链接、blob: 一律原样保留（blob 换页面就失效，不能存）。
+ */
+(function () {
+    'use strict';
+
+    var KEY = 'CHAT_APP_V3_media';
+    var REF = 'm:';
+    var MIN_LEN = 2048;
+    var MAX_ITEMS = 5000;
+
+    var items = {};        // id -> dataUrl
+    var dirty = false;
+    var inited = false;
+    var initPromise = null;
+
+    function isMedia(v) {
+        if (typeof v !== 'string' || v.length < MIN_LEN) return false;
+        return v.charCodeAt(0) === 100 /* d */ &&
+            (v.indexOf('data:image') === 0 || v.indexOf('data:audio') === 0 || v.indexOf('data:video') === 0);
+    }
+
+    /** 采样哈希：最多取 4K 个字符，500KB 的图也不卡 */
+    function hashOf(s) {
+        var n = s.length;
+        var h = 5381;
+        var step = Math.max(1, Math.floor(n / 4096));
+        for (var i = 0; i < n; i += step) {
+            h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+        }
+        h = ((h << 5) + h + s.charCodeAt(n - 1)) | 0;
+        // 长度也参与，避免不同图撞在一起
+        return (h >>> 0).toString(36) + '-' + n.toString(36);
+    }
+
+    function init() {
+        if (initPromise) return initPromise;
+        initPromise = (async function () {
+            try {
+                if (typeof localforage === 'undefined') return;
+                var saved = await localforage.getItem(KEY);
+                if (saved && typeof saved === 'object') {
+                    var src = saved.items || saved;
+                    for (var k in src) {
+                        if (Object.prototype.hasOwnProperty.call(src, k) && typeof src[k] === 'string') {
+                            items[k] = src[k];
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[media] 读取失败，按空库启动', e);
+            }
+            inited = true;
+        })();
+        return initPromise;
+    }
+
+    function flush() {
+        if (!dirty) return Promise.resolve(true);
+        if (typeof localforage === 'undefined') return Promise.resolve(false);
+        var payload = { v: 1, items: items };
+        return localforage.setItem(KEY, payload).then(function () {
+            dirty = false;
+            return true;
+        }).catch(function (e) {
+            console.warn('[media] 写入失败（可能是空间不足）', e);
+            return false;
+        });
+    }
+
+    /** 存一份，返回引用串；非媒体原样返回 */
+    function ref(v) {
+        if (!isMedia(v)) return v;
+        var id = hashOf(v);
+        var cur = items[id];
+        if (cur === v) return REF + id;
+        if (cur && cur !== v) {
+            // 哈希撞了：加后缀区分，保证不串图
+            var i = 0, alt = id;
+            while (items[alt] && items[alt] !== v) { alt = id + '+' + (++i); }
+            id = alt;
+            if (items[id] === v) return REF + id;
+        }
+        if (Object.keys(items).length >= MAX_ITEMS && !cur) return v;   // 到上限就放弃外置
+        items[id] = v;
+        dirty = true;
+        return REF + id;
+    }
+
+    /** 引用还原成真实地址；找不到返回 ''（调用方按「无图」处理） */
+    function resolve(v) {
+        if (typeof v !== 'string' || v.indexOf(REF) !== 0) return v;
+        var got = items[v.slice(REF.length)];
+        return typeof got === 'string' ? got : '';
+    }
+
+    function isRef(v) {
+        return typeof v === 'string' && v.indexOf(REF) === 0;
+    }
+
+    /** 原地把 media 字段换成引用（只动这一层 + 一层嵌套，够用且快） */
+    function shrink(node, depth) {
+        if (!node || typeof node !== 'object') return node;
+        if (Array.isArray(node)) {
+            for (var i = 0; i < node.length; i++) shrink(node[i], depth);
+            return node;
+        }
+        for (var k in node) {
+            if (!Object.prototype.hasOwnProperty.call(node, k)) continue;
+            var v = node[k];
+            if (typeof v === 'string') {
+                if (isMedia(v)) node[k] = ref(v);
+            } else if (v && typeof v === 'object' && depth < 3) {
+                shrink(v, depth + 1);
+            }
+        }
+        return node;
+    }
+
+    /** 渲染用：把一条消息里的引用还原，返回浅拷贝（不改原对象） */
+    function hydrateOne(m) {
+        if (!m || typeof m !== 'object') return m;
+        var out = null;
+        var ensure = function () {
+            if (out) return;
+            out = {};
+            for (var p in m) {
+                if (Object.prototype.hasOwnProperty.call(m, p)) out[p] = m[p];
+            }
+        };
+        for (var k in m) {
+            if (!Object.prototype.hasOwnProperty.call(m, k)) continue;
+            var v = m[k];
+            if (isRef(v)) {
+                ensure();
+                out[k] = resolve(v);
+            } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+                var nested = null;
+                for (var k2 in v) {
+                    if (!Object.prototype.hasOwnProperty.call(v, k2)) continue;
+                    if (isRef(v[k2])) {
+                        if (!nested) {
+                            nested = {};
+                            for (var q in v) {
+                                if (Object.prototype.hasOwnProperty.call(v, q)) nested[q] = v[q];
+                            }
+                        }
+                        nested[k2] = resolve(v[k2]);
+                    }
+                }
+                if (nested) { ensure(); out[k] = nested; }
+            }
+        }
+        return out || m;
+    }
+
+    /** 统计用：外置媒体的总字节（按 UTF-16 估算） */
+    function bytes() {
+        var n = 0;
+        for (var k in items) {
+            if (Object.prototype.hasOwnProperty.call(items, k)) n += items[k].length * 2;
+        }
+        return n;
+    }
+
+    function count() {
+        return Object.keys(items).length;
+    }
+
+    /** 清理没被引用的媒体（可选，重置/导入后调用） */
+    function gc(keepIds) {
+        if (!keepIds) return 0;
+        var drop = [];
+        for (var k in items) {
+            if (Object.prototype.hasOwnProperty.call(items, k) && !keepIds[k]) drop.push(k);
+        }
+        drop.forEach(function (k) { delete items[k]; });
+        if (drop.length) dirty = true;
+        return drop.length;
+    }
+
+    /** 从备份里恢复媒体（导出时放进 mediaStore 的 ms: 前缀项） */
+    function importFrom(store) {
+        if (!store || typeof store !== 'object') return 0;
+        var n = 0;
+        for (var k in store) {
+            if (!Object.prototype.hasOwnProperty.call(store, k)) continue;
+            if (k.indexOf('ms:') !== 0) continue;
+            var id = k.slice(3);
+            if (typeof store[k] === 'string' && !items[id]) {
+                items[id] = store[k];
+                n++;
+            }
+        }
+        if (n) dirty = true;
+        return n;
+    }
+
+    /** 导出用：把媒体库塞进备份的 mediaStore（前缀 ms:，避免和导出器的 m1/m2 混） */
+    function exportTo(store) {
+        var n = 0;
+        for (var k in items) {
+            if (!Object.prototype.hasOwnProperty.call(items, k)) continue;
+            store['ms:' + k] = items[k];
+            n++;
+        }
+        return n;
+    }
+
+    function clear() {
+        items = {};
+        dirty = true;
+        return flush();
+    }
+
+    window.MediaStore = {
+        version: '1.0.0-p31',
+        KEY: KEY,
+        init: init,
+        flush: flush,
+        ref: ref,
+        resolve: resolve,
+        isRef: isRef,
+        shrink: shrink,
+        hydrateOne: hydrateOne,
+        shrinkMessages: function (arr) { return shrink(arr, 0); },
+        bytes: bytes,
+        count: count,
+        gc: gc,
+        importFrom: importFrom,
+        exportTo: exportTo,
+        clear: clear,
+        isReady: function () { return inited; }
+    };
+})();
+
+</script>
+    <script data-src="js/image-repack.js">
+/* ===== js/image-repack.js ===== */
+/* P32 存量图片重压：把已经躺在库里的老图按新参数（短边 800 / webp）重新编码
+ *
+ * 只做一件事：找到所有 data:image 字符串，超过阈值的重新编码，更小才替换。
+ *
+ * 三条安全线：
+ *   1. 压完不比原来小 —— 保留原图，绝不变大
+ *   2. 任何一张解码失败 —— 跳过，不动它
+ *   3. 媒体库里换图**不改 id**，所有 `m:<id>` 引用照旧成立
+ *      （id 只是键名，不是内容校验；换值不影响任何一条消息）
+ *
+ * 调用方负责先提示用户导出备份。
+ */
+(function () {
+    'use strict';
+
+    var MEDIA_KEY = 'CHAT_APP_V3_media';
+    var MIN_BYTES = 48 * 1024;      // 小于这个的图不值得重压
+    var YIELD_EVERY = 8;            // 每压 8 张让一次主线程，手机上不卡死
+
+    function measure(node, acc) {
+        if (!node) return acc;
+        if (typeof node === 'string') return acc + node.length;
+        if (typeof node !== 'object') return acc;
+        if (Array.isArray(node)) {
+            for (var i = 0; i < node.length; i++) acc = measure(node[i], acc);
+            return acc;
+        }
+        for (var k in node) {
+            if (Object.prototype.hasOwnProperty.call(node, k)) acc = measure(node[k], acc);
+        }
+        return acc;
+    }
+
+    function isHeavyImage(v) {
+        return typeof v === 'string' && v.length > MIN_BYTES * 1.35 &&
+            v.indexOf('data:image') === 0;
+    }
+
+    function presetFor(dataUrl) {
+        var mime = window.ImageCodec ? window.ImageCodec.mimeOf(dataUrl) : '';
+        if (mime === 'image/png') return window.ImageCodec.PRESET.text;   // 截图 / 图形：保真优先
+        return window.ImageCodec.PRESET.photo;
+    }
+
+    /** 深遍历，就地把超标的 data:image 压小；返回 {before, after, changed, failed} */
+    async function walk(node, stat, cache, tick) {
+        if (!node || typeof node !== 'object') return;
+        var keys = Array.isArray(node) ? null : Object.keys(node);
+        var list = keys || node;
+        for (var i = 0; i < list.length; i++) {
+            var k = keys ? keys[i] : i;
+            var v = node[k];
+            if (typeof v === 'string') {
+                if (!isHeavyImage(v)) continue;
+                stat.before += v.length;
+                var hit = cache.get(v);
+                if (hit === undefined) {
+                    try {
+                        var out = await window.ImageCodec.encode(v, presetFor(v));
+                        hit = (out && out.length && out.length < v.length) ? out : null;
+                    } catch (e) {
+                        hit = null;
+                    }
+                    cache.set(v, hit);
+                    if (cache.size > 300) cache.clear();   // 别让缓存自己变成新的内存大户
+                    await tick();
+                }
+                if (hit) {
+                    node[k] = hit;
+                    stat.after += hit.length;
+                    stat.changed++;
+                } else {
+                    stat.after += v.length;
+                    stat.skipped++;
+                }
+            } else if (v && typeof v === 'object') {
+                await walk(v, stat, cache, tick);
+            }
+        }
+    }
+
+    function makeTicker() {
+        var n = 0;
+        return function () {
+            n++;
+            if (n % YIELD_EVERY !== 0) return Promise.resolve();
+            return new Promise(function (r) { setTimeout(r, 0); });
+        };
+    }
+
+    /**
+     * @param {(info:{phase:string, done:number, total:number})=>void} onProgress
+     */
+    async function run(onProgress) {
+        var report = { before: 0, after: 0, changed: 0, skipped: 0, failed: 0, keys: 0 };
+        if (typeof localforage === 'undefined' || !window.ImageCodec) {
+            report.failed = -1;
+            return report;
+        }
+        var say = function (phase, done, total) {
+            if (typeof onProgress === 'function') {
+                try { onProgress({ phase: phase, done: done, total: total }); } catch (e) { }
+            }
+        };
+
+        var cache = new Map();
+        var tick = makeTicker();
+
+        // 1) 媒体库：值替换，id 不动
+        try {
+            var media = await localforage.getItem(MEDIA_KEY);
+            if (media && media.items) {
+                var ids = Object.keys(media.items);
+                say('媒体库', 0, ids.length);
+                for (var i = 0; i < ids.length; i++) {
+                    var raw = media.items[ids[i]];
+                    if (isHeavyImage(raw)) {
+                        report.before += raw.length;
+                        var out = null;
+                        try {
+                            out = await window.ImageCodec.encode(raw, presetFor(raw));
+                        } catch (e) { out = null; }
+                        if (out && out.length && out.length < raw.length) {
+                            media.items[ids[i]] = out;
+                            report.after += out.length;
+                            report.changed++;
+                        } else {
+                            report.after += raw.length;
+                            report.skipped++;
+                        }
+                        await tick();
+                    }
+                    if (i % 4 === 0) say('媒体库', i + 1, ids.length);
+                }
+                media.v = 1;
+                await localforage.setItem(MEDIA_KEY, media);
+            }
+        } catch (e) {
+            console.warn('[repack] 媒体库处理失败', e);
+            report.failed++;
+        }
+
+        // 2) 其余键：贴纸库、背景图库、头像、心情图等
+        var allKeys = [];
+        try {
+            allKeys = await localforage.keys();
+        } catch (e) {
+            allKeys = [];
+        }
+        var others = allKeys.filter(function (k) {
+            return k !== MEDIA_KEY && k.indexOf('CHAT_APP_V3_') === 0;
+        });
+        say('其他数据', 0, others.length);
+        for (var j = 0; j < others.length; j++) {
+            var key = others[j];
+            var val = null;
+            try {
+                val = await localforage.getItem(key);
+            } catch (e) {
+                report.failed++;
+                continue;
+            }
+            if (!val || typeof val !== 'object') continue;
+            var stat = { before: 0, after: 0, changed: 0, skipped: 0 };
+            try {
+                await walk(val, stat, cache, tick);
+            } catch (e) {
+                console.warn('[repack] 键处理失败', key, e);
+                report.failed++;
+                continue;
+            }
+            report.before += stat.before;
+            report.after += stat.after;
+            report.changed += stat.changed;
+            report.skipped += stat.skipped;
+            if (stat.changed > 0) {
+                try {
+                    await localforage.setItem(key, val);
+                    report.keys++;
+                } catch (e) {
+                    console.warn('[repack] 写回失败', key, e);
+                    report.failed++;
+                }
+            }
+            say('其他数据', j + 1, others.length);
+        }
+
+        if (window.MediaStore && typeof MediaStore.flush === 'function') {
+            try { await MediaStore.flush(); } catch (e) { }
+        }
+        return report;
+    }
+
+    window.ImageRepack = {
+        version: '1.0.0-p32',
+        run: run,
+        measure: function (node) { return measure(node, 0); }
+    };
+})();
+
+</script>
     <script data-src="js/config.js">
 /* ===== js/config.js ===== */
 /*应用常量与数据结构*/
@@ -14508,7 +15251,16 @@ function deduplicateContentArray(arr, baseSystemArray = []) {
                         ctx.imageSmoothingEnabled = true;
                         ctx.imageSmoothingQuality = 'high';
                         ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, maxSize, maxSize);
-                        resolve(canvas.toDataURL('image/jpeg', 0.95));
+                        // P32：头像优先进 webp；PNG 源保留透明通道，不硬转 JPEG
+                        const isPng = /^data:image\/png/i.test(e.target.result);
+                        let out = '';
+                        try {
+                            if (window.ImageCodec && window.ImageCodec.canWebp()) out = canvas.toDataURL('image/webp', 0.9);
+                        } catch (err) { out = ''; }
+                        if (!out || out.indexOf('data:image/webp') !== 0) {
+                            out = isPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.92);
+                        }
+                        resolve(out);
                     };
                     img.onerror = reject;
                     img.src = e.target.result;
@@ -15408,6 +16160,11 @@ async function importAllData(file) {
             lsOut[k2] = processLocalStorageValueForExport(lsData[k2], state);
         }
         var coverage = buildCoverage(lfData, lsData);
+        // P31：消息里的图已经外置成 m:<id>，真正的图在媒体库，要一并带上
+        var mediaOut = state.store;
+        if (window.MediaStore && typeof MediaStore.exportTo === 'function') {
+            try { MediaStore.exportTo(mediaOut); } catch (e) { console.warn('[backup] 媒体库导出失败', e); }
+        }
         return {
             type: 'chatapp-backup-v4',
             formatVersion: 4,
@@ -15417,7 +16174,7 @@ async function importAllData(file) {
             appPrefix: typeof APP_PREFIX !== 'undefined' ? APP_PREFIX : 'CHAT_APP_V3_',
             modules: flags,
             coverage: coverage,
-            mediaStore: state.store,
+            mediaStore: mediaOut,
             localforage: lfOut,
             localStorage: lsOut
         };
@@ -15679,6 +16436,14 @@ async function importAllData(file) {
         var needRemap = backupSid && curSid && backupSid !== curSid;
 
         var writtenLf = 0, writtenLs = 0, failed = 0;
+
+        // P31：先把媒体库填回来，否则消息里的 m:<id> 会解析成空图
+        if (window.MediaStore && typeof MediaStore.importFrom === 'function') {
+            try {
+                var mCount = MediaStore.importFrom(mediaStore);
+                if (mCount) await MediaStore.flush();
+            } catch (e0) { console.warn('[backup] 媒体库恢复失败', e0); }
+        }
 
         for (var i = 0; i < lfKeys.length; i++) {
             var lk = lfKeys[i];
@@ -16032,15 +16797,39 @@ async function importAllData(file) {
             window._skipBackup = true;
             messages = [];
             settings = {};
-            localforage.clear().then(() => {
-                localStorage.clear();
+            (async function () {
+                // P31：以前只清主库，旧库（localforage）和其他 IndexedDB 库都留着，
+                //      重置完看着还有上百 MB。这里逐个清干净。
+                try { if (window.MediaStore) await MediaStore.clear(); } catch (e) { }
+                try { await localforage.clear(); } catch (e) { }
+                try {
+                    var legacy = localforage.createInstance({ name: 'localforage', storeName: 'keyvaluepairs' });
+                    await legacy.clear();
+                } catch (e) { }
+                try { localStorage.clear(); sessionStorage.clear(); } catch (e) { }
+                try {
+                    if (indexedDB.databases) {
+                        var dbs = await indexedDB.databases();
+                        for (var i = 0; i < dbs.length; i++) {
+                            var nm = dbs[i] && dbs[i].name;
+                            if (!nm) continue;
+                            await new Promise(function (res) {
+                                var req = indexedDB.deleteDatabase(nm);
+                                req.onsuccess = req.onerror = req.onblocked = function () { res(); };
+                                setTimeout(res, 1200);
+                            });
+                        }
+                    }
+                } catch (e) { }
+                try {
+                    if (window.caches && caches.keys) {
+                        var ks = await caches.keys();
+                        for (var j = 0; j < ks.length; j++) { try { await caches.delete(ks[j]); } catch (e) { } }
+                    }
+                } catch (e) { }
                 showNotification('所有数据已重置，页面即将刷新', 'info', 2000);
                 setTimeout(() => { window.location.href = window.location.pathname + '?reset=' + Date.now(); }, 2000);
-            }).catch(e => {
-                window._skipBackup = false;
-                showNotification('清除数据时发生错误', 'error');
-                console.error("清除 localforage 失败:", e);
-            });
+            })();
         }
     };
 }
@@ -16254,6 +17043,7 @@ autoSendInterval: 5,
 
 const loadData = async () => {
     try {
+        if (window.MediaStore) { try { await MediaStore.init(); } catch (e0) { console.warn('[media] 初始化失败', e0); } }
         settings = getDefaultSettings();
 
         
@@ -16356,6 +17146,20 @@ const loadData = async () => {
             } else {
                 messages = [];
             }
+        }
+
+        // P31：历史数据里的图是内联 base64，一张图用 N 次就存 N 份。
+        // 这里先把它们换成引用（只换一次，之后都是引用，几乎零开销），
+        // 有新外置的再回写一次，老用户的占用会凭空降下来。
+        if (window.MediaStore && messages.length) {
+            try {
+                var _mBefore = MediaStore.count();
+                MediaStore.shrink(messages, 0);
+                if (MediaStore.count() > _mBefore) {
+                    MediaStore.flush();
+                    setTimeout(function () { try { saveData(); } catch (e) { } }, 2500);
+                }
+            } catch (e) { console.warn('[media] 历史媒体外置失败', e); }
         }
 
         if (savedBgGallery) {
@@ -16536,6 +17340,22 @@ const saveData = async () => {
         return;
     }
 
+    // P31：图片先去重进媒体库并落盘，之后消息里只写 m:<id> 引用。
+    //      顺序不能反 —— 万一配额满写不进媒体库，消息却已改成引用，刷新后图就丢了。
+    if (window.MediaStore) {
+        try {
+            MediaStore.shrinkMessages(messages);
+            var _mediaOk = await MediaStore.flush();
+            if (!_mediaOk) {
+                for (var _mi = 0; _mi < messages.length; _mi++) {
+                    var _mm = messages[_mi];
+                    if (_mm && _mm.image && MediaStore.isRef(_mm.image)) _mm.image = MediaStore.resolve(_mm.image);
+                }
+                console.warn('[media] 媒体库写入失败，本次回退成内联图片');
+            }
+        } catch (e) { console.warn('[media] 媒体外置失败，本次仍写内联图', e); }
+    }
+
     const promises = [
         { key: 'chatSettings',           val: () => localforage.setItem(getStorageKey('chatSettings'), settings) },
         { key: 'customReplies',          val: () => localforage.setItem(getStorageKey('customReplies'), customReplies) },
@@ -16584,6 +17404,8 @@ const saveData = async () => {
         try { return p.val(); }
         catch(e) { return Promise.reject(e); }
     }));
+
+    if (window.MediaStore) { try { await MediaStore.flush(); } catch (e) { } }
 
     const failed = [];
     results.forEach((r, i) => {
@@ -16897,6 +17719,7 @@ function manageAutoSendTimer() {
         };
 
 function createMessageFragment(msg, prevMsg, nextMsg, lastSenderRef) {
+    if (window.MediaStore) msg = MediaStore.hydrateOne(msg);
     const fragment = new DocumentFragment();
     const messageDate = new Date(msg.timestamp).toDateString();
     const prevDate = prevMsg ? new Date(prevMsg.timestamp).toDateString() : null;
@@ -17031,7 +17854,7 @@ function createMessageFragment(msg, prevMsg, nextMsg, lastSenderRef) {
 
     const isImageOnly = !msg.text && !!msg.image;
     let content = msg.text ? `<div>${msg.text.replace(/\n/g, '<br>')}</div>` : '';
-    if (msg.image) content += `<img src="${msg.image}" class="message-image${isImageOnly ? ' message-image-only' : ''}" alt="图片" style="max-width:${isImageOnly ? '100px' : '100px'}; border-radius: 12px;${!isImageOnly ? ' margin-top: 6px;' : ''} cursor: pointer;" onclick="viewImage('${msg.image}')">`;
+    if (msg.image) content += `<img src="${msg.image}" class="message-image${isImageOnly ? ' message-image-only' : ''}" alt="图片" style="max-width:${isImageOnly ? '100px' : '100px'}; border-radius: 12px;${!isImageOnly ? ' margin-top: 6px;' : ''} cursor: pointer;" onclick="viewImage(this.src)">`;
     messageHTML += content;
 
     const messageDiv = document.createElement('div');
@@ -17243,41 +18066,26 @@ const addMessage = (message) => {
             });
         };
 
-        function optimizeImage(file, maxWidth = 800, quality = 0.7) {
-            return new Promise((resolve, reject) => {
-                if (file.size < 300 * 1024) {
-                    const reader = new FileReader();
-                    reader.onload = e => resolve(e.target.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                    return;
+        // P32：统一交给 ImageCodec（长边限制 / webp / 保留透明通道）。
+        // 第二参既可传预设名（photo / text / sticker / avatar），也兼容老写法传数字宽度。
+        function optimizeImage(file, modeOrMax, quality) {
+            if (window.ImageCodec) {
+                let opts;
+                if (typeof modeOrMax === 'string') {
+                    opts = window.ImageCodec.PRESET[modeOrMax] || window.ImageCodec.PRESET.photo;
+                } else if (typeof modeOrMax === 'number') {
+                    opts = { shortEdge: modeOrMax, quality: typeof quality === 'number' ? quality : 0.82, allowJpeg: true };
+                } else {
+                    opts = window.ImageCodec.PRESET.photo;
                 }
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    let {
-                        width,
-                        height
-                    } = img;
-                    if (width > maxWidth) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', quality));
-                    URL.revokeObjectURL(img.src);
-                };
-                img.onerror = () => {
-                    const reader = new FileReader();
-                    reader.onload = e => resolve(e.target.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                    URL.revokeObjectURL(img.src);
-                };
-                img.src = URL.createObjectURL(file);
+                return window.ImageCodec.encode(file, opts);
+            }
+            // 兜底：ImageCodec 没加载时按原图出入
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
         }
 
@@ -17513,7 +18321,7 @@ if (!isBatchMode && type === 'normal') {
                     if (!file) return;
                     if (file.size > MAX_IMAGE_SIZE) { showNotification('图片超过5MB限制', 'warning'); return; }
                     try {
-                        const base64 = await optimizeImage(file, 600, 0.8);
+                        const base64 = await optimizeImage(file, 'photo');
                         addToBatch(base64);
                     } catch(err) { showNotification('图片处理失败', 'error'); }
                     e.target.value = '';
@@ -18261,6 +19069,9 @@ function showModal(modalElement, focusElement = null) {
         }
 
 window.initializeSession = async function() {
+    // [P30] 等旧库救援完成再读会话，否则可能读到空 sessionList 直接新建会话，
+    //       老数据（字卡 / 心情 / 信封等）就会被「藏」在旧会话里看起来像丢了
+    try { if (window.__lfRescue) await window.__lfRescue; } catch (e) { }
     await migrateData();
 
     const sessionsData = await localforage.getItem(`${APP_PREFIX}sessionList`);
@@ -19618,6 +20429,10 @@ let editingEnvSection = null;
 async function loadEnvelopeData() {
     const saved = await localforage.getItem(getStorageKey('envelopeData'));
     if (saved) envelopeData = saved;
+    // [P30] 容错：老数据 / 半截数据可能缺 outbox / inbox，补成空数组，
+    //       否则下面 .forEach 直接抛错，整个信封界面白屏，看起来像「数据没了」
+    if (!Array.isArray(envelopeData.outbox)) envelopeData.outbox = [];
+    if (!Array.isArray(envelopeData.inbox)) envelopeData.inbox = [];
     const oldPending = await localforage.getItem(getStorageKey('pending_envelope'));
     if (oldPending && envelopeData.outbox.length === 0) {
         envelopeData.outbox.push({
@@ -24052,9 +24867,10 @@ window._runMsgSearch = function() {
             ? '<img src="' + avatar + '" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;">'
             : '<div style="width:34px;height:34px;border-radius:50%;background:rgba(var(--accent-color-rgb,180,140,100),0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-user" style="font-size:14px;color:var(--accent-color);"></i></div>';
 
+        var _mv = window.MediaStore ? MediaStore.hydrateOne(msg) : msg;
         var contentHtml = '';
         if (msg.text) contentHtml += '<div style="font-size:13px;color:var(--text-primary);line-height:1.5;word-break:break-word;margin-top:3px;">' + highlight(msg.text) + '</div>';
-        if (msg.image) contentHtml += '<img src="' + msg.image + '" style="max-width:120px;max-height:90px;border-radius:8px;display:block;margin-top:5px;cursor:pointer;" onclick="if(typeof viewImage===\'function\')viewImage(\'' + msg.image.replace(/'/g,"\\'") + '\')" loading="lazy">';
+        if (_mv.image) contentHtml += '<img src="' + _mv.image + '" style="max-width:120px;max-height:90px;border-radius:8px;display:block;margin-top:5px;cursor:pointer;" onclick="if(typeof viewImage===\'function\')viewImage(this.src)" loading="lazy">';
 
         return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:12px;background:var(--primary-bg);border:1px solid var(--border-color);margin-bottom:8px;cursor:pointer;" onclick="if(typeof scrollToMessage===\'function\')scrollToMessage(' + msg.id + ')">'
             + avatarHtml
@@ -25848,9 +26664,10 @@ function renderFavorites() {
             month: '2-digit', day: '2-digit',
             hour: '2-digit', minute: '2-digit'
         }) : '';
+        const _mv = window.MediaStore ? MediaStore.hydrateOne(msg) : msg;
         const content = msg.text
             ? msg.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            : (msg.image ? `<img src="${msg.image}" style="max-width:100%;max-height:180px;border-radius:8px;display:block;margin-top:4px;cursor:pointer;" onclick="if(typeof viewImage==='function')viewImage('${msg.image.replace(/'/g,'\\\'')}')" loading="lazy">` : '');
+            : (_mv.image ? `<img src="${_mv.image}" style="max-width:100%;max-height:180px;border-radius:8px;display:block;margin-top:4px;cursor:pointer;" onclick="if(typeof viewImage==='function')viewImage(this.src)" loading="lazy">` : '');
         const avatarEl = isUser
             ? (typeof DOMElements !== 'undefined' ? DOMElements.me.avatar : null)
             : (typeof DOMElements !== 'undefined' ? DOMElements.partner.avatar : null);
@@ -25956,9 +26773,10 @@ window._runMsgSearch = function() {
         const ts = msg.timestamp ? new Date(msg.timestamp).toLocaleString('zh-CN', {
             month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
         }) : '';
+        const _mv2 = window.MediaStore ? MediaStore.hydrateOne(msg) : msg;
         const content = msg.text
             ? highlight(msg.text, q)
-            : (msg.image ? `<img src="${msg.image}" style="max-height:60px;border-radius:6px;display:block;margin-top:4px;" loading="lazy">` : '');
+            : (_mv2.image ? `<img src="${_mv2.image}" style="max-height:60px;border-radius:6px;display:block;margin-top:4px;" loading="lazy">` : '');
         return `<div style="display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:12px;background:var(--primary-bg);border:1px solid var(--border-color);margin-bottom:8px;cursor:pointer;"
             onclick="if(typeof showNotification==='function')showNotification('已定位消息', 'info', 1500); if(typeof scrollToQuotedMessage==='function'){var el=document.createElement('div');el.dataset.replyId='${msg.id}';scrollToQuotedMessage(el);}">
             ${getAvatarHtml(isUser)}
@@ -28488,6 +29306,13 @@ window.tryShowDailyGreeting = function() {
         +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">从文件恢复</div><div class="dm-drawer-btn-desc">选择之前导出的备份文件</div></div>'
         +       '</button>'
         +     '</div>'
+        +     '<div id="dm-repack-box" style="margin:2px 0 10px;">'
+        +       '<button class="dm-drawer-action-btn" id="repack-images-real" style="width:100%;">'
+        +         '<div class="dm-drawer-btn-icon"><i class="fas fa-compress-alt"></i></div>'
+        +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">压缩旧图片</div><div class="dm-drawer-btn-desc">把已存的图重新压小，省空间 · 建议先导出备份</div></div>'
+        +       '</button>'
+        +       '<div id="dm-repack-tip" style="display:none;white-space:pre-line;margin-top:8px;padding:9px 11px;border-radius:12px;background:var(--primary-bg);border:1px solid var(--border-color);font-size:11.5px;line-height:1.6;color:var(--text-secondary);"></div>'
+        +     '</div>'
         +     '<button class="dm-drawer-cancel" id="dm-drawer-full-cancel">取消</button>'
         +   '</div>'
         + '</div>';
@@ -28558,38 +29383,74 @@ window.tryShowDailyGreeting = function() {
         return (b / 1048576).toFixed(2) + ' MB';
     }
 
-    function applyStats(total, msgs, cfg, media) {
-        var pct = Math.min(100, total / (5 * 1024 * 1024) * 100);
+    function applyStats(total, msgs, cfg, media, quota, isReal) {
+        var cap = quota && quota > 0 ? quota : (5 * 1024 * 1024);
+        var pct = Math.min(100, total / cap * 100);
         var g = function (id) { return document.getElementById(id); };
         var bar = g('dm-storage-bar');
         if (bar) {
-            bar.style.width = pct.toFixed(1) + '%';
+            bar.style.width = Math.max(pct, total > 0 ? 1.5 : 0).toFixed(1) + '%';
             bar.style.background = pct > 80
                 ? 'linear-gradient(90deg,#FF3B30,#CC0000)'
                 : pct > 50
                 ? 'linear-gradient(90deg,#FF9F0A,#E07000)'
                 : 'linear-gradient(90deg,var(--accent-color),rgba(var(--accent-color-rgb),0.6))';
         }
-        if (g('dm-storage-total')) g('dm-storage-total').textContent = fmt(total) + ' / ~5 MB';
+        if (g('dm-storage-total')) {
+            g('dm-storage-total').textContent = fmt(total) + ' / ' + fmt(cap);
+            g('dm-storage-total').title = isReal
+                ? '这是浏览器实际占用的空间（含索引开销）'
+                : '浏览器未提供真实占用，这里是按数据量估算的';
+        }
         if (g('dm-stat-msgs'))     g('dm-stat-msgs').textContent     = fmt(msgs);
         if (g('dm-stat-settings')) g('dm-stat-settings').textContent = fmt(cfg);
         if (g('dm-stat-media'))    g('dm-stat-media').textContent    = fmt(media);
     }
 
+    /* P31：总量改成浏览器给的「真实占用」，分类仍按数据量拆分。
+       旧版是自己按字符数 ×2 估，估出来比实际大好几倍，还把上限写死成 5MB，
+       于是出现「796MB / ~5MB」这种自相矛盾的数字。 */
     function updateStats() {
         var total = 0, msgs = 0, cfg = 0, media = 0;
+        var classify = function (k, bytes) {
+            total += bytes;
+            if (/(^|[^a-z])media$/i.test(k) || /CHAT_APP_V3_media$/i.test(k)) media += bytes;
+            else if (/messages|msgs|session/i.test(k)) msgs += bytes;
+            else if (/avatar|image|photo|gallery|sticker|theme|background|wallpaper|cover|song|player/i.test(k)) media += bytes;
+            else cfg += bytes;
+        };
+        var lsDone = false;
         var processLS = function () {
+            if (lsDone) return;
+            lsDone = true;
             for (var i = 0; i < localStorage.length; i++) {
                 var k = localStorage.key(i) || '';
                 var v = localStorage.getItem(k) || '';
                 var bytes = (k.length + v.length) * 2;
                 total += bytes;
                 if (/messages|msgs|session/i.test(k)) msgs += bytes;
-                else if (v.startsWith('data:image') || v.startsWith('data:video')) media += bytes;
+                else if (v.indexOf('data:image') === 0 || v.indexOf('data:video') === 0) media += bytes;
                 else cfg += bytes;
             }
-            applyStats(total, msgs, cfg, media);
         };
+        var est = (window.navigator && navigator.storage && navigator.storage.estimate)
+            ? navigator.storage.estimate().catch(function () { return null; })
+            : Promise.resolve(null);
+
+        var finish = function () {
+            est.then(function (e) {
+                var real = e && e.usage > 0 ? e.usage : 0;
+                var quota = e && e.quota > 0 ? e.quota : 0;
+                var logical = msgs + cfg + media || 1;
+                var scale = real > 0 ? real / logical : 1;
+                applyStats(
+                    real > 0 ? real : logical,
+                    (msgs + 0) * scale, (cfg + 0) * scale, (media + 0) * scale,
+                    quota, real > 0
+                );
+            });
+        };
+
         try {
             if (window.localforage) {
                 localforage.keys().then(function (keys) {
@@ -28601,17 +29462,13 @@ window.tryShowDailyGreeting = function() {
                         });
                     });
                     Promise.all(promises).then(function (results) {
-                        results.forEach(function (r) {
-                            total += r.b;
-                            if (/messages|msgs|session/i.test(r.k)) msgs += r.b;
-                            else if (/avatar|image|photo|bg|background|wallpaper/i.test(r.k)) media += r.b;
-                            else cfg += r.b;
-                        });
-                        applyStats(total, msgs, cfg, media);
-                    }).catch(processLS);
-                }).catch(processLS);
-            } else { processLS(); }
-        } catch (e) { processLS(); }
+                        results.forEach(function (r) { classify(r.k, r.b); });
+                        processLS();
+                        finish();
+                    }).catch(function () { processLS(); finish(); });
+                }).catch(function () { processLS(); finish(); });
+            } else { processLS(); finish(); }
+        } catch (e) { processLS(); finish(); }
     }
 
     function syncToggles() {
@@ -28699,6 +29556,43 @@ window.tryShowDailyGreeting = function() {
                     if (f && typeof importAllData === 'function') importAllData(f);
                 };
                 inp.click();
+            });
+
+            var repackBtn = fullDrawer.querySelector('#repack-images-real');
+            if (repackBtn) repackBtn.addEventListener('click', function () {
+                if (!window.ImageRepack || !window.ImageCodec) {
+                    if (typeof showNotification === 'function') showNotification('压缩模块未加载', 'error');
+                    return;
+                }
+                if (!confirm('压缩旧图片会重写库里所有已存的图，压完不可还原。\n\n建议先点上面的「导出备份」存一份，再回来执行。\n\n确定现在压缩吗？')) return;
+                var tip = fullDrawer.querySelector('#dm-repack-tip');
+                var show = function (t) {
+                    if (!tip) return;
+                    tip.style.display = 'block';
+                    tip.textContent = t;
+                };
+                repackBtn.disabled = true;
+                show('准备中…');
+                window.ImageRepack.run(function (p) {
+                    var pct = p.total > 0 ? Math.round(p.done / p.total * 100) : 0;
+                    show(p.phase + ' ' + p.done + ' / ' + p.total + '（' + pct + '%），中途别关页面');
+                }).then(function (r) {
+                    repackBtn.disabled = false;
+                    if (r.failed === -1) { show('压缩不可用：当前环境不支持。'); return; }
+                    var save = Math.max(0, r.before - r.after);
+                    var mb = function (n) { return (n / 1048576).toFixed(1) + ' MB'; };
+                    var txt = save > 0
+                        ? '完成：' + r.changed + ' 张已压小，省出约 ' + mb(save) + '（' + mb(r.before) + ' → ' + mb(r.after) + '）。'
+                        : '完成：没有可压的图，或者压完不比原来小，已全部保留原样。';
+                    show(txt + '\n刷新页面后生效。');
+                    if (typeof showNotification === 'function') showNotification('图片压缩完成，省出约 ' + mb(save), 'success');
+                    setTimeout(function () {
+                        try { location.reload(); } catch (e) { }
+                    }, 2600);
+                }).catch(function (e) {
+                    repackBtn.disabled = false;
+                    show('压缩中断：' + (e && e.message ? e.message : '未知错误') + '。原有图片未受影响。');
+                });
             });
         }
 
@@ -28876,21 +29770,29 @@ function updateStorageUsageBar() {
                 });
                 Promise.all(promises).then(function(sizes) {
                     var total   = sizes.reduce(function(a,b){return a+b;},0);
-                    var usedKB  = (total / 1024).toFixed(1);
-                    var maxBytes = 5 * 1024 * 1024;
-                    var pct     = Math.min(total / maxBytes * 100, 100).toFixed(1);
                     var fmt     = function(b) { return b<1024 ? b+' B' : b<1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(2)+' MB'; };
-
-                    if (bar) {
-                        bar.style.width = pct + '%';
-                        if (parseFloat(pct) > 80)
-                            bar.style.background = 'linear-gradient(90deg,#FF3B30,#CC0000)';
-                        else if (parseFloat(pct) > 50)
-                            bar.style.background = 'linear-gradient(90deg,#FF9F0A,#E07000)';
-                        else
-                            bar.style.background = 'linear-gradient(90deg,var(--accent-color),rgba(var(--accent-color-rgb),0.6))';
+                    var applyReal = function (real, quota) {
+                        var use = real > 0 ? real : total;
+                        var cap = quota > 0 ? quota : (5 * 1024 * 1024);
+                        var pct = Math.min(use / cap * 100, 100).toFixed(1);
+                        if (bar) {
+                            bar.style.width = Math.max(parseFloat(pct), use > 0 ? 1.5 : 0) + '%';
+                            if (parseFloat(pct) > 80)
+                                bar.style.background = 'linear-gradient(90deg,#FF3B30,#CC0000)';
+                            else if (parseFloat(pct) > 50)
+                                bar.style.background = 'linear-gradient(90deg,#FF9F0A,#E07000)';
+                            else
+                                bar.style.background = 'linear-gradient(90deg,var(--accent-color),rgba(var(--accent-color-rgb),0.6))';
+                        }
+                        if (text) text.textContent = fmt(use) + ' / ' + fmt(cap);
+                    };
+                    if (window.navigator && navigator.storage && navigator.storage.estimate) {
+                        navigator.storage.estimate().then(function (e) {
+                            applyReal(e && e.usage || 0, e && e.quota || 0);
+                        }).catch(function () { applyReal(0, 0); });
+                    } else {
+                        applyReal(0, 0);
                     }
-                    if (text) text.textContent = fmt(total) + ' / ~5 MB (' + pct + '%)';
                 });
             }).catch(function() {
                 var ls = 0;
@@ -49773,7 +50675,7 @@ const stickerInput = document.getElementById('sticker-file-input');
 
                     for (const file of validFiles) {
                         try {
-                            const base64 = await optimizeImage(file, 300, 0.8);
+                            const base64 = await optimizeImage(file, 'sticker');
                             stickerLibrary.push(base64);
                             successCount++;
                         } catch (err) {
@@ -49807,7 +50709,7 @@ if (myStickerQuickUpload) {
         let ok = 0, fail = 0;
         for (const file of validFiles) {
             try {
-                const base64 = await optimizeImage(file, 300, 0.8);
+                const base64 = await optimizeImage(file, 'sticker');
                 myStickerLibrary.push(base64);
                 ok++;
             } catch(err) { fail++; }
